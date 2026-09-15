@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>경력사원 온보딩 진단</title>
+<style>
+  :root{
+    --navy:#0F2A4A; --blue:#2E5AA8; --amber:#C97B2E;
+    --bg:#F4F6FA; --card:#fff; --line:#E2E7F0; --text:#1C2733; --sub:#5B6B7F;
+    --ok:#1E7A46; --err:#B23B3B;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg); color:var(--text); line-height:1.6;
+    font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;}
+  .wrap{max-width:760px; margin:0 auto; padding:0 18px 80px}
+  .hero{background:linear-gradient(135deg,var(--navy),#173B66); color:#fff; padding:30px 26px 26px; margin-bottom:22px}
+  .hero .eyebrow{font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.75; margin-bottom:8px}
+  .hero h1{font-size:21px; margin:0 0 6px; font-weight:800}
+  .hero p{margin:0; font-size:13px; opacity:.9}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px 22px; margin-bottom:16px}
+  .card h2{font-size:14.5px; color:var(--navy); margin:0 0 4px}
+  .card .desc{font-size:12.5px; color:var(--sub); margin:0 0 16px}
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  label.q{display:block; font-size:13.5px; font-weight:700; margin-bottom:8px; white-space:pre-line}
+  label.q .req{color:var(--err); margin-left:3px}
+  label.q .detail{display:block; font-weight:400; font-size:12px; color:var(--sub); margin-top:3px; white-space:pre-line}
+  input[type=text], input[type=date], textarea, select{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px;
+    font:inherit; color:var(--text); background:#fff}
+  textarea{min-height:76px; resize:vertical}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--blue); outline-offset:0; border-color:var(--blue)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media(max-width:520px){ .grid2{grid-template-columns:1fr} }
+  .likert{display:flex; gap:6px; flex-wrap:wrap}
+  .likert label{flex:1; min-width:88px; border:1px solid var(--line); border-radius:8px; padding:8px 6px;
+    text-align:center; font-size:12px; cursor:pointer; background:#fff; user-select:none}
+  .likert label:hover{border-color:var(--blue)}
+  .likert input{position:absolute; opacity:0; width:0; height:0}
+  .likert input:checked + span{font-weight:800}
+  .likert label:has(input:checked){background:var(--navy); color:#fff; border-color:var(--navy)}
+  .likert .n{display:block; font-size:15px; font-weight:800; margin-bottom:2px}
+  .avgbox{font-size:12.5px; color:var(--sub); margin-top:8px}
+  .avgbox b{color:var(--navy); font-size:14px}
+  .actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:6px}
+  button{font:inherit; cursor:pointer; border:0; border-radius:8px; padding:11px 20px; font-weight:800}
+  button.primary{background:var(--navy); color:#fff}
+  button.primary:disabled{opacity:.5; cursor:default}
+  button.ghost{background:#fff; color:var(--navy); border:1px solid var(--line); font-weight:700}
+  .msg{margin-top:14px; padding:12px 14px; border-radius:8px; font-size:13px; display:none}
+  .msg.show{display:block}
+  .msg.ok{background:#E7F4EC; color:var(--ok); border:1px solid #B5DCC4}
+  .msg.err{background:#FBECEC; color:var(--err); border:1px solid #E7C3C3}
+  .msg.warn{background:#FBF3E7; color:#8A5A1E; border:1px solid #E7D6B8}
+  .foot{font-size:11px; color:var(--sub); margin-top:24px; text-align:center}
+  .hidden{display:none !important}
+  .badge{display:inline-block; background:#EEF2FA; color:var(--blue); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px}
+  code.copybox{display:block; background:#0F2A4A; color:#EAF0FB; padding:10px 12px; border-radius:8px; font-size:12px; white-space:pre-wrap; word-break:break-all; margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">인재개발팀 · Talent Development</div>
+    <h1 id="hTitle">경력사원 온보딩 진단</h1>
+    <p id="hDesc">아래 링크 파라미터로 설문 유형이 결정됩니다.</p>
+  </div>
+
+  <div id="typePicker" class="card hidden">
+    <h2>설문 유형을 선택하세요</h2>
+    <p class="desc">보통은 인재개발팀이 유형이 지정된 링크를 보냅니다. 직접 여신 경우 아래에서 선택하세요.</p>
+    <div class="actions">
+      <button class="ghost" data-t="1_newhire">1차 · 입사자(채용 만족도)</button>
+      <button class="ghost" data-t="1_hm">1차 · 팀장(채용 Quality)</button>
+      <button class="ghost" data-t="2_newhire">2차 · 입사자(온보딩 적응)</button>
+      <button class="ghost" data-t="2_hm">2차 · 팀장(온보딩 피드백)</button>
+    </div>
+  </div>
+
+  <form id="form" class="hidden">
+    <div class="card">
+      <h2>1. 인적사항</h2>
+      <p class="desc" id="idDesc"></p>
+      <div class="grid2">
+        <div class="field"><label class="q">소속(팀)<span class="req">*</span></label><input type="text" name="소속" required></div>
+        <div class="field"><label class="q" id="lblWriter">작성자 성명<span class="req">*</span></label><input type="text" name="작성자" required></div>
+      </div>
+      <div class="grid2">
+        <div class="field" id="wrapTarget"><label class="q">대상자(입사자) 성명<span class="req">*</span></label><input type="text" name="대상자"></div>
+        <div class="field"><label class="q">직급(CL)</label>
+          <select name="직급CL"><option value="">선택</option><option>CL1</option><option>CL2</option><option>CL3</option><option>CL4</option><option>CL4(p)</option></select>
+        </div>
+      </div>
+      <div class="field"><label class="q">입사일<span class="req">*</span></label><input type="date" name="입사일" required></div>
+    </div>
+
+    <div class="card" id="qCard">
+      <h2 id="qTitle">2. 진단 문항</h2>
+      <p class="desc" id="qDesc">1~5점: 5 매우 그렇다 / 4 그렇다 / 3 보통 / 2 그렇지 않다 / 1 전혀 그렇지 않다</p>
+      <div id="questions"></div>
+      <div class="avgbox hidden" id="avgBox">리커트 평균(6문항): <b id="avgVal">–</b> <span id="avgConv" class="sub"></span></div>
+    </div>
+
+    <div class="card hidden" id="scCard">
+      <h2>3. 자가 점검 (7항목)</h2>
+      <p class="desc">각 항목을 객관적인 수치 또는 구체적인 행동 사례를 바탕으로 서술해 주세요.</p>
+      <div id="selfcheck"></div>
+    </div>
+
+    <div class="card hidden" id="fbCard">
+      <h2>3. 면담 · 서명</h2>
+      <div class="grid2">
+        <div class="field"><label class="q">면담일</label><input type="date" name="면담일"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="q">입사자 서명(성명)</label><input type="text" name="입사자서명"></div>
+        <div class="field"><label class="q">팀장 서명(성명)</label><input type="text" name="팀장서명"></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="submitBtn">제출</button>
+      <span class="badge" id="modeBadge"></span>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="msg warn" id="fallback">
+      자동 전송이 확인되지 않았습니다. 아래 값을 복사해 인재개발팀에 전달하거나 <b>hr_collector.html</b>에 붙여넣어 주세요.
+      <button type="button" class="ghost" id="copyBtn" style="margin-top:8px">JSON 복사</button>
+      <code class="copybox" id="payloadBox"></code>
+    </div>
+  </form>
+
+  <div class="foot">문의: 인재개발팀 김희진 (khjin928)</div>
+</div>
+
+<script>
+/* ===================================================================
+ *  ▼▼▼  배포 후 여기만 교체  ▼▼▼
+ *  내 Apps Script 웹앱 배포 URL (…/exec)
+ * =================================================================== */
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbyRoGj5cO7ogYUZvwINh8FBw3f6pspmrilVfB5iMPHnDLAT-cfOoQlxjgruFkm8cWy7/exec';
+/* =================================================================== */
+
+const LIKERT = [
+  {v:5, t:'매우 그렇다'}, {v:4, t:'그렇다'}, {v:3, t:'보통'},
+  {v:2, t:'그렇지 않다'}, {v:1, t:'전혀 그렇지 않다'}
+];
+
+/* 리커트 평균에 들어가는 문항 index (1-base): Q1,Q2,Q4,Q5,Q7,Q8 */
+const LIKERT_QNO = [1,2,4,5,7,8];
+
+const CONFIG = {
+  '1_newhire': {
+    sheet:'1차_입사자', 차수:'1차', 진단시점:'D+30', 역할:'입사자', target:false,
+    title:'1차 채용 만족도 조사 (입사자)',
+    desc:'입사 후 약 1개월(D+30) 시점, 채용 과정에 대한 솔직한 의견을 들려주세요. 응답은 인재개발팀만 확인합니다.',
+    writerLabel:'작성자(본인) 성명',
+    questions:[
+      {no:1, type:'likert', key:'Q1. 채용 과정(공고, 면접, 오퍼)에서 안내받은 내용이…', text:'Q1. 채용 과정(공고, 면접, 오퍼)에서 안내받은 내용이 실제와 대체로 일치했다.'},
+      {no:2, type:'likert', key:'Q2. 최종 처우 및 근무조건 협의 과정이 투명하고 합리적…', text:'Q2. 최종 처우 및 근무조건 협의 과정이 투명하고 합리적이었다.'},
+      {no:3, type:'text',   key:'Q3. 입사 결정에 가장 크게 작용한 요인은 무엇이었나요?…', text:'Q3. 입사 결정에 가장 크게 작용한 요인은 무엇이었나요? (처우 / 직무 / 성장기회 등)'},
+      {no:4, type:'likert', key:'Q4. 채용 시 안내받은 직무/역할 내용이 실제 배치된 업…', text:'Q4. 채용 시 안내받은 직무/역할 내용이 실제 배치된 업무와 일치했다.'},
+      {no:5, type:'likert', key:'Q5. 현재 담당 업무가 본인의 경력과 전문성을 발휘하기에…', text:'Q5. 현재 담당 업무가 본인의 경력과 전문성을 발휘하기에 적합하다.'},
+      {no:6, type:'text',   key:'Q6. 채용 시 기대와 실제 업무 간 차이가 있었다면 어떤…', text:'Q6. 채용 시 기대와 실제 업무 간 차이가 있었다면 어떤 부분이었나요?'},
+      {no:7, type:'likert', key:'Q7. 입사 첫 달, 팀과 업무에 적응하는 데 큰 어려움은…', text:'Q7. 입사 첫 달, 팀과 업무에 적응하는 데 큰 어려움은 없었다.'},
+      {no:8, type:'likert', key:'Q8. 전반적으로 이번 채용 프로세스에 만족한다.', text:'Q8. 전반적으로 이번 채용 프로세스에 만족한다.'},
+      {no:9, type:'text',   key:'Q9. 채용 프로세스에서 개선되었으면 하는 점이 있다면 자…', text:'Q9. 채용 프로세스에서 개선되었으면 하는 점이 있다면 자유롭게 적어주세요.'}
+    ]
+  },
+  '1_hm': {
+    sheet:'1차_HM', 차수:'1차', 진단시점:'D+30', 역할:'팀장(HM)', target:true,
+    title:'1차 채용 Quality 평가 (팀장)',
+    desc:'담당하신 경력 입사자의 초기 정착 상태와 채용 적합도를 평가해 주세요. 채용담당자 피드백에 활용됩니다.',
+    writerLabel:'작성자(팀장) 성명',
+    questions:[
+      {no:1, type:'likert', key:'Q1. 서류/면접에서 파악된 역량과 실제 초기 업무 수행 …', text:'Q1. 서류/면접에서 파악된 역량과 실제 초기 업무 수행 수준이 대체로 일치한다.'},
+      {no:2, type:'likert', key:'Q2. 채용 시 기대했던 직무 적합성 수준에 부합하고 있다…', text:'Q2. 채용 시 기대했던 직무 적합성 수준에 부합하고 있다.'},
+      {no:3, type:'text',   key:'Q3. 서류/면접 시점과 실제 역량 간 차이가 있었다면 어…', text:'Q3. 서류/면접 시점과 실제 역량 간 차이가 있었다면 어떤 부분이었나요?'},
+      {no:4, type:'likert', key:'Q4. 현재까지의 초기 적응 속도가 기대 수준이다.', text:'Q4. 현재까지의 초기 적응 속도가 기대 수준이다.'},
+      {no:5, type:'likert', key:'Q5. 초기 업무 수행 결과물의 수준이 기대에 부합한다.', text:'Q5. 초기 업무 수행 결과물의 수준이 기대에 부합한다.'},
+      {no:6, type:'text',   key:'Q6. 조기 안정적 전력화를 위해 추가로 필요한 지원이 있…', text:'Q6. 조기 안정적 전력화를 위해 추가로 필요한 지원이 있다면 무엇인가요?'},
+      {no:7, type:'likert', key:'Q7. 이 채용 건은 전반적으로 성공적인 채용이었다고 평가…', text:'Q7. 이 채용 건은 전반적으로 성공적인 채용이었다고 평가한다.'},
+      {no:8, type:'likert', key:'Q8. 향후 이 직무/포지션에 유사한 프로필의 인재를 다시…', text:'Q8. 향후 이 직무/포지션에 유사한 프로필의 인재를 다시 채용할 의향이 있다.'},
+      {no:9, type:'text',   key:'Q9. 채용담당자에게 전달하고 싶은 피드백(포지셔닝, 소싱…', text:'Q9. 채용담당자에게 전달하고 싶은 피드백(포지셔닝, 소싱 채널 등)이 있다면 적어주세요.'}
+    ]
+  },
+  '2_newhire': {
+    sheet:'2차_입사자', 차수:'2차', 진단시점:'D+90', 역할:'입사자', target:false,
+    title:'2차 온보딩 적응 만족도 + 자가 점검 (입사자)',
+    desc:'입사 후 약 3개월(D+90) 시점, 조직 적응과 업무 온보딩 경험을 점검합니다. 자가 점검 7항목은 팀장 면담 자료로 활용됩니다.',
+    writerLabel:'작성자(본인) 성명',
+    questions:[
+      {no:1, type:'likert', key:'Q1. 입사 후 팀 내 분위기에 자연스럽게 녹아들 수 있었…', text:'Q1. 입사 후 팀 내 분위기에 자연스럽게 녹아들 수 있었다.'},
+      {no:2, type:'likert', key:'Q2. 팀장/동료가 업무 외적인 부분(생활/고충 등)에도 …', text:'Q2. 팀장/동료가 업무 외적인 부분(생활/고충 등)에도 관심을 보여주었다.'},
+      {no:3, type:'text',   key:'Q3. 조직 문화나 내부 규범을 이해하는 데 어려움이 있었…', text:'Q3. 조직 문화나 내부 규범을 이해하는 데 어려움이 있었다면 어떤 부분이었나요?'},
+      {no:4, type:'likert', key:'Q4. 입사 초기 업무 파악에 필요한 안내(자료, 시스템,…', text:'Q4. 입사 초기 업무 파악에 필요한 안내(자료, 시스템, 절차 등)가 충분히 제공되었다.'},
+      {no:5, type:'likert', key:'Q5. 담당 업무 수행에 실질적인 도움을 받을 수 있었다 …', text:'Q5. 담당 업무 수행에 실질적인 도움을 받을 수 있었다 (버디, HR 등).'},
+      {no:6, type:'text',   key:'Q6. 업무 온보딩 과정에서 가장 부족하거나 아쉬웠던 점은…', text:'Q6. 업무 온보딩 과정에서 가장 부족하거나 아쉬웠던 점은 무엇인가요?'},
+      {no:7, type:'likert', key:'Q7. 입사 전 기대했던 것과 실제 회사 환경이 대체로 일…', text:'Q7. 입사 전 기대했던 것과 실제 회사 환경이 대체로 일치했다.'},
+      {no:8, type:'likert', key:'Q8. 현재 이 회사에서 장기적으로 근무하고 싶다는 생각이…', text:'Q8. 현재 이 회사에서 장기적으로 근무하고 싶다는 생각이 있다.'},
+      {no:9, type:'text',   key:'Q9. 회사 또는 HR에 바라는 점이 있다면 자유롭게 적어…', text:'Q9. 회사 또는 HR에 바라는 점이 있다면 자유롭게 적어주세요.'}
+    ],
+    selfcheck:[
+      {key:'자가점검_성과 달성도', label:'① 성과 달성도', detail:'부여된 업무 및 과제를 기한 내 기대 수준에 부합하는 결과물을 생산하는가?'},
+      {key:'자가점검_직무 전문성', label:'② 직무 전문성', detail:'보유한 경력과 지식을 적용하여 실무에 직접적으로 기여하고 있는가?'},
+      {key:'자가점검_직무 적합성', label:'③ 직무 적합성', detail:'담당 직무 수행에 필요한 핵심 역량과 전문성을 보유하고 있는가?'},
+      {key:'자가점검_확장 가능성', label:'④ 확장 가능성', detail:'현재 직무 범위를 넘어 향후 상위 역할로의 성장 잠재력을 보이는가?'},
+      {key:'자가점검_조직 적합성', label:'⑤ 조직 적합성', detail:'회사의 핵심 가치와 일하는 방식을 존중하며, 조직의 분위기와 문화에 적응하려 노력하는가?'},
+      {key:'자가점검_협업 능력', label:'⑥ 협업 능력', detail:'동료 및 유관 부서와 원활하게 소통하며, 공동의 목표 달성을 위해 적극적으로 협력하는가?'},
+      {key:'자가점검_책임감/성실성', label:'⑦ 책임감/성실성', detail:'본인에게 부여된 역할에 대해 주인 의식을 갖고, 문제 시 대안을 찾아 끝까지 완수하려 노력하는가?'}
+    ]
+  },
+  '2_hm': {
+    sheet:'2차_HM', 차수:'2차', 진단시점:'D+90', 역할:'팀장(HM)', target:true,
+    title:'2차 온보딩 자가점검 피드백 (팀장)',
+    desc:'입사자가 제출한 (첨부2) 자가 점검표를 확인하고, 각 항목별 피드백을 작성합니다. 면담 후 상호 서명해 주세요.',
+    writerLabel:'작성자(팀장) 성명',
+    questions:[],
+    hmfeedback:[
+      {sc:'1.성과 달성도(자가점검)', fb:'1.성과 달성도(팀장피드백)', label:'① 성과 달성도', detail:'부여된 업무 및 과제를 기한 내 기대 수준에 부합하는 결과물을 생산하는가?'},
+      {sc:'2.직무 전문성(자가점검)', fb:'2.직무 전문성(팀장피드백)', label:'② 직무 전문성', detail:'보유한 경력과 지식을 적용하여 실무에 직접적으로 기여하고 있는가?'},
+      {sc:'3.직무 적합성(자가점검)', fb:'3.직무 적합성(팀장피드백)', label:'③ 직무 적합성', detail:'담당 직무 수행에 필요한 핵심 역량과 전문성을 보유하고 있는가?'},
+      {sc:'4.확장 가능성(자가점검)', fb:'4.확장 가능성(팀장피드백)', label:'④ 확장 가능성', detail:'현재 직무 범위를 넘어 향후 상위 역할로의 성장 잠재력을 보이는가?'},
+      {sc:'5.조직 적합성(자가점검)', fb:'5.조직 적합성(팀장피드백)', label:'⑤ 조직 적합성', detail:'회사의 핵심 가치와 일하는 방식을 존중하며, 조직의 분위기와 문화에 적응하려 노력하는가?'},
+      {sc:'6.협업 능력(자가점검)', fb:'6.협업 능력(팀장피드백)', label:'⑥ 협업 능력', detail:'동료 및 유관 부서와 원활하게 소통하며, 공동의 목표 달성을 위해 적극적으로 협력하는가?'},
+      {sc:'7.책임감/성실성(자가점검)', fb:'7.책임감/성실성(팀장피드백)', label:'⑦ 책임감/성실성', detail:'본인에게 부여된 역할에 대해 주인 의식을 갖고, 문제 시 대안을 찾아 끝까지 완수하려 노력하는가?'}
+    ]
+  }
+};
+
+const $ = s => document.querySelector(s);
+const qs = new URLSearchParams(location.search);
+let TYPE = qs.get('type');
+
+if (!CONFIG[TYPE]) {
+  $('#typePicker').classList.remove('hidden');
+  document.querySelectorAll('#typePicker button').forEach(b=>{
+    b.onclick = ()=>{ location.search = '?type=' + b.dataset.t; };
+  });
+} else {
+  buildForm(CONFIG[TYPE]);
+}
+
+function el(tag, attrs, html){
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+function buildForm(cfg){
+  $('#form').classList.remove('hidden');
+  $('#hTitle').textContent = cfg.title;
+  $('#hDesc').textContent = cfg.desc;
+  $('#idDesc').textContent = cfg.역할 === '팀장(HM)' ? '평가 대상 입사자와 본인(팀장) 정보를 입력하세요.' : '';
+  $('#lblWriter').firstChild.textContent = cfg.writerLabel;
+  $('#modeBadge').textContent = cfg.sheet;
+
+  if (!cfg.target) { $('#wrapTarget').classList.add('hidden'); }
+  else { $('#wrapTarget').querySelector('input').required = true; }
+
+  // 문항
+  const box = $('#questions');
+  if (!cfg.questions.length) { $('#qCard').classList.add('hidden'); }
+  (cfg.questions||[]).forEach(q=>{
+    const f = el('div', {class:'field'});
+    const lab = el('label', {class:'q'});
+    lab.textContent = q.text;
+    if (q.type === 'likert') lab.innerHTML += ' <span class="req">*</span>';
+    f.appendChild(lab);
+    if (q.type === 'likert'){
+      const grp = el('div', {class:'likert'});
+      LIKERT.forEach(opt=>{
+        const l = el('label');
+        l.innerHTML = `<input type="radio" name="${cssKey(q.key)}" value="${opt.v}" required data-likert="${q.no}"><span><span class="n">${opt.v}</span>${opt.t}</span>`;
+        grp.appendChild(l);
+      });
+      f.appendChild(grp);
+    } else {
+      f.appendChild(el('textarea', {name:cssKey(q.key), placeholder:'자유롭게 작성'}));
+    }
+    box.appendChild(f);
+  });
+
+  if ((cfg.questions||[]).some(q=>q.type==='likert')) {
+    $('#avgBox').classList.remove('hidden');
+    box.addEventListener('change', updateAvg);
+  }
+
+  // 자가점검 7항목 (2_newhire)
+  if (cfg.selfcheck){
+    $('#scCard').classList.remove('hidden');
+    const sb = $('#selfcheck');
+    cfg.selfcheck.forEach(s=>{
+      const f = el('div', {class:'field'});
+      f.innerHTML = `<label class="q">${s.label}<span class="detail">${s.detail}</span></label>`;
+      f.appendChild(el('textarea', {name:cssKey(s.key), placeholder:'예: 대표 사례 + 정량 지표'}));
+      sb.appendChild(f);
+    });
+  }
+
+  // 팀장 피드백 (2_hm): 자가점검(입력) + 팀장피드백(입력)
+  if (cfg.hmfeedback){
+    $('#fbCard').classList.remove('hidden');
+    const sb = $('#selfcheck');
+    $('#scCard').querySelector('h2').textContent = '2. 항목별 자가점검 확인 · 팀장 피드백';
+    $('#scCard').querySelector('.desc').textContent = '입사자가 제출한 (첨부2) 자가 점검표의 각 항목 내용을 옮겨 적고, 팀장 피드백을 작성하세요.';
+    $('#scCard').classList.remove('hidden');
+    cfg.hmfeedback.forEach(s=>{
+      const f = el('div', {class:'field'});
+      f.innerHTML = `<label class="q">${s.label}<span class="detail">${s.detail}</span></label>`;
+      const t1 = el('textarea', {name:cssKey(s.sc), placeholder:'입사자 자가점검 내용'});
+      const t2 = el('textarea', {name:cssKey(s.fb), placeholder:'팀장 피드백 (개선 방안 · 향후 성장 제언)'});
+      f.appendChild(el('div',{style:'font-size:11.5px;color:var(--sub);margin-bottom:4px'},'입사자 자가점검'));
+      f.appendChild(t1);
+      f.appendChild(el('div',{style:'font-size:11.5px;color:var(--sub);margin:8px 0 4px'},'팀장 피드백'));
+      f.appendChild(t2);
+      sb.appendChild(f);
+    });
+  }
+
+  $('#form').addEventListener('submit', onSubmit);
+  $('#copyBtn').addEventListener('click', ()=>{
+    navigator.clipboard.writeText($('#payloadBox').textContent).then(()=>{
+      $('#copyBtn').textContent = '복사됨 ✓';
+    });
+  });
+}
+
+/* name 속성에 한글/특수문자 그대로 쓰면 querySelector 가 까다로워 → base64 키 사용 */
+function cssKey(k){ return 'k_' + btoa(unescape(encodeURIComponent(k))).replace(/=/g,''); }
+function decKey(name){ return decodeURIComponent(escape(atob(name.slice(2)))); }
+
+function updateAvg(){
+  const cfg = CONFIG[TYPE];
+  const vals = [];
+  cfg.questions.filter(q=>q.type==='likert' && LIKERT_QNO.includes(q.no)).forEach(q=>{
+    const c = document.querySelector(`input[name="${cssKey(q.key)}"]:checked`);
+    if (c) vals.push(Number(c.value));
+  });
+  if (vals.length === LIKERT_QNO.length){
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length * 100) / 100;
+    $('#avgVal').textContent = avg.toFixed(2);
+    $('#avgConv').textContent = '→ 100점 환산 ' + (avg*20).toFixed(1) + '점';
+  } else {
+    $('#avgVal').textContent = '– (' + vals.length + '/' + LIKERT_QNO.length + ' 응답)';
+    $('#avgConv').textContent = '';
+  }
+}
+
+function collect(cfg){
+  const fd = new FormData($('#form'));
+  const rec = {
+    '제출시각': new Date().toLocaleString('ko-KR'),
+    '차수': cfg.차수, '진단시점': cfg.진단시점, '역할': cfg.역할,
+    '소속': (fd.get('소속')||'').trim(),
+    '작성자': (fd.get('작성자')||'').trim(),
+    '대상자': (fd.get('대상자')||'').trim(),
+    '직급CL': fd.get('직급CL')||'',
+    '입사일': fd.get('입사일')||''
+  };
+  // 문항
+  (cfg.questions||[]).forEach(q=>{
+    const name = cssKey(q.key);
+    if (q.type === 'likert'){
+      const c = document.querySelector(`input[name="${name}"]:checked`);
+      rec[q.key] = c ? Number(c.value) : '';
+    } else {
+      rec[q.key] = (fd.get(name)||'').trim();
+    }
+  });
+  // 리커트평균
+  if ((cfg.questions||[]).some(q=>q.type==='likert')){
+    const v = cfg.questions.filter(q=>q.type==='likert' && LIKERT_QNO.includes(q.no))
+      .map(q=>rec[q.key]).filter(x=>typeof x === 'number');
+    rec['리커트평균'] = v.length === LIKERT_QNO.length
+      ? Math.round(v.reduce((a,b)=>a+b,0)/v.length*100)/100 : '';
+  }
+  // 자가점검
+  (cfg.selfcheck||[]).forEach(s=>{ rec[s.key] = (fd.get(cssKey(s.key))||'').trim(); });
+  // 팀장 피드백
+  (cfg.hmfeedback||[]).forEach(s=>{
+    rec[s.sc] = (fd.get(cssKey(s.sc))||'').trim();
+    rec[s.fb] = (fd.get(cssKey(s.fb))||'').trim();
+  });
+  if (cfg.sheet === '2차_HM'){
+    rec['면담일'] = fd.get('면담일')||'';
+    rec['입사자서명'] = (fd.get('입사자서명')||'').trim();
+    rec['팀장서명'] = (fd.get('팀장서명')||'').trim();
+  }
+  return rec;
+}
+
+function onSubmit(ev){
+  ev.preventDefault();
+  const cfg = CONFIG[TYPE];
+  const msg = $('#msg');
+  msg.className = 'msg'; msg.textContent = '';
+  $('#fallback').classList.remove('show');
+
+  if (!$('#form').reportValidity()) return;
+
+  const record = collect(cfg);
+  const payload = { _kind:'survey', _sheet: cfg.sheet, record };
+
+  if (SUBMIT_URL === 'MY_WEB_APP_URL'){
+    showFallback(payload, '아직 SUBMIT_URL이 설정되지 않았습니다(관리자 설정 필요). 값은 아래에서 복사할 수 있습니다.');
+    return;
+  }
+
+  const btn = $('#submitBtn');
+  btn.disabled = true; btn.textContent = '전송 중…';
+
+  fetch(SUBMIT_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  }).then(()=>{
+    msg.className = 'msg ok show';
+    msg.textContent = '제출이 완료되었습니다. 감사합니다. (별도 회신 불필요)';
+    $('#form').querySelectorAll('input,textarea,select,button').forEach(x=>x.disabled = true);
+  }).catch(err=>{
+    btn.disabled = false; btn.textContent = '제출';
+    showFallback(payload, '자동 전송에 실패했습니다: ' + err);
+  });
+}
+
+function showFallback(payload, why){
+  const msg = $('#msg');
+  msg.className = 'msg err show';
+  msg.textContent = why;
+  $('#payloadBox').textContent = JSON.stringify(payload, null, 2);
+  $('#fallback').classList.add('show');
+  const btn = $('#submitBtn'); btn.disabled = false; btn.textContent = '제출';
+}
+</script>
+</body>
+</html>
