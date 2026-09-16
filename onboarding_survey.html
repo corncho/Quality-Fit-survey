@@ -102,7 +102,7 @@ const SELF_ITEMS=[
 ];
 const SURVEYS={
   '1_new':{round:'1차',roundTag:'D+30',role:'입사자',title:'(1차, D+30) 채용 Quality 진단 · 입사자',
-    desc:'입사 후 약 한 달 시점의 채용 품질을 점검합니다.',themes:[
+    desc:'',themes:[
     {cat:'(A) 채용 결정 및 기대 일치',q:[
       {t:'L',text:'채용 과정(공고, 면접, 오퍼)에서 안내받은 내용이 명확하고 신뢰할 수 있었다.'},
       {t:'L',text:'최종 처우 및 근무조건 협의 과정이 투명하고 합리적이었다.'},
@@ -178,7 +178,17 @@ function moodMsg(){
   return map[state.key]||'';
 }
 
-function render(){if(state.step==='entry')return renderEntry();if(state.step==='survey')return renderSurvey();if(state.step==='done')return renderDone();}
+function render(){if(state.step==='entry')return renderEntry();if(state.step==='survey')return renderSurvey();if(state.step==='done')return renderDone();if(state.step==='closed')return renderClosed();if(state.step==='checking')return renderChecking();}
+function renderChecking(){
+  app.innerHTML=`<div class="card" style="text-align:center;padding:50px 20px;color:var(--ink-soft)">확인 중…</div>`;
+}
+function renderClosed(){
+  app.innerHTML=`<div class="card done">
+    <div class="ic" style="background:var(--line-soft);color:var(--ink-soft)">&#128274;</div>
+    <h2>설문이 종료되었습니다</h2>
+    <p>이 링크는 더 이상 응답을 받지 않습니다. 문의사항은 <b>${esc(HRDEST)}</b>으로 연락해 주세요.</p>
+  </div>`;
+}
 function renderEntry(){
   const rs=state.round,rl=state.role;
   app.innerHTML=`<div class="card">
@@ -308,7 +318,7 @@ function shell(s,inner){
   const mood=moodMsg();
   return `<div class="card">
     <h1 style="font-size:19px">${esc(s.title)}</h1>
-    <p class="lead" style="margin-bottom:8px">${esc(s.desc)}</p>
+    ${s.desc?`<p class="lead" style="margin-bottom:8px">${esc(s.desc)}</p>`:''}
     <div class="muted" style="font-size:12.5px;margin-bottom:14px">대상: ${esc(who)} · ${esc(state.profile.dept)} · 입사일 ${esc(state.profile.hire)}</div>
     ${mood?`<div class="mood">${esc(mood)}</div>`:''}
     ${inner}
@@ -459,6 +469,7 @@ function initParams(){
     const ro=q.get('role'); if(ro==='new'||ro==='hm')state.role=ro;
     syncKey();
     ['dept','name','target','cl','hire'].forEach(k=>{const v=q.get(k); if(v)state.profile[k]=v;});
+    const code=q.get('code'); if(code)state.linkCode=code;
     /* 예전 링크 호환: role=hm인데 name 대신 hm 파라미터로 팀장명을 보낸 경우 */
     if(state.role==='hm' && !state.profile.name){ const hmName=q.get('hm'); if(hmName)state.profile.name=hmName; }
     const scM=location.search.match(/[?&]sc=([^&]*)/);
@@ -479,8 +490,29 @@ function initParams(){
     }
   }catch(e){}
 }
+/* 링크 잠금 여부 확인(HR이 시트 '_link_status' 상태 열을 closed로 바꾸면 접근 차단).
+   code 파라미터가 없거나 SUBMIT_URL 미설정이면 검사 없이 통과(fail-open). */
+function checkLinkStatus(code, done){
+  let finished=false;
+  const finish=()=>{ if(finished)return; finished=true; done(); };
+  window.__linkStatusCb=(resp)=>{
+    if(resp && resp.ok && resp.status==='closed'){ state.step='closed'; }
+    finish();
+  };
+  const s=document.createElement('script');
+  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&callback=__linkStatusCb&_='+Date.now();
+  s.onerror=finish;
+  document.body.appendChild(s);
+  setTimeout(finish, 2500); // 응답이 늦으면 막지 않고 통과
+}
 initParams();
-render();
+if(state.linkCode && SUBMIT_URL){
+  const resolvedStep=state.step;
+  state.step='checking'; render();
+  checkLinkStatus(state.linkCode, ()=>{ if(state.step!=='closed') state.step=resolvedStep; render(); });
+}else{
+  render();
+}
 </script>
 </body>
 </html>

@@ -142,16 +142,19 @@
     <p class="lead" id="hmLead">각 항목의 수준을 선택하면 배점 대비 취득 점수가 자동 계산됩니다. 항목별 <b>기준 보기</b>로 직급별 판단 기준을 확인할 수 있습니다.</p>
     <div id="evalArea"></div>
 
-    <div class="total-box">
-      <div><div class="lbl">총점</div><div class="big"><span id="totalScore">0</span><small>/100</small></div></div>
-      <div><div class="lbl">등급</div><div class="grade-chip" id="gradeChip">-</div></div>
-      <div class="subtotals">
-        <div>직무 역량 <b><span id="subJob">0</span>/70</b></div>
-        <div>조직 적응 <b><span id="subOrg">0</span>/30</b></div>
+    <div class="note" id="hmProgress" style="display:none">0 / 7 항목 작성 완료</div>
+    <div id="scoreReveal" style="display:none">
+      <div class="total-box">
+        <div><div class="lbl">총점</div><div class="big"><span id="totalScore">0</span><small>/100</small></div></div>
+        <div><div class="lbl">등급</div><div class="grade-chip" id="gradeChip">-</div></div>
+        <div class="subtotals">
+          <div>직무 역량 <b><span id="subJob">0</span>/70</b></div>
+          <div>조직 적응 <b><span id="subOrg">0</span>/30</b></div>
+        </div>
       </div>
-    </div>
-    <div class="gradekey">
-      <span>S · 95~100</span><span>A · 90~94</span><span>B+ · 80~89</span><span>B · 70~79</span><span>C · 70 미만</span>
+      <div class="gradekey">
+        <span>S · 95~100</span><span>A · 90~94</span><span>B+ · 80~89</span><span>B · 70~79</span><span>C · 70 미만</span>
+      </div>
     </div>
 
     <label class="fld" style="margin-top:18px"><span class="lb">팀장 평가 의견 (객관적 수치 또는 구체적 행동 사례 기반)</span>
@@ -362,6 +365,10 @@ function recalc(){
   const allDone=CATS.flatMap(c=>c.items).every(it=>scores[it.key]);
   chip.textContent=allDone?g:'-';
   chip.style.background=allDone?gradeColor(g):'rgba(255,255,255,.16)';
+  const doneCount=CATS.flatMap(c=>c.items).filter(it=>scores[it.key]).length;
+  const totalCount=CATS.flatMap(c=>c.items).length;
+  const prog=document.getElementById('hmProgress');
+  if(prog) prog.textContent=`${doneCount} / ${totalCount} 항목 작성 완료`;
 }
 function onCLChange(){
   CATS.flatMap(c=>c.items).forEach(it=>{
@@ -565,11 +572,13 @@ function applyStage(){
     setDept('hm',_params.get('hmdept')||_params.get('dept'));
     const cl=_params.get('cl');
     if(cl){ const el=g('p_cl'); if(el){ el.value=cl; onCLChange(); } }
+    g('hmProgress').style.display=''; g('scoreReveal').style.display='none';
     showMood();
   }else{
     pill.textContent='2단계 · 담당임원 결재';
     desc.textContent='팀장 평가 결과를 확인하고 아래에서 결재(점수·의견·서명)하신 뒤 제출하세요.';
     g('execEntryBtn').style.display='none';
+    g('hmProgress').style.display='none'; g('scoreReveal').style.display='';
     const d=HM_DATA||{};
     const set=(id,v)=>{const el=g(id);if(el){el.value=v||'';el.disabled=true;}};
     setDept('p',d.입사자?.소속,true);set('p_name',d.입사자?.성명);set('p_hire',d.입사자?.입사일);
@@ -588,9 +597,35 @@ function applyStage(){
   }
 }
 
-buildDeptSelects();
-if(STAGE==='hm'){ buildEval(); }
-applyStage();
+function startApp(){
+  buildDeptSelects();
+  if(STAGE==='hm'){ buildEval(); }
+  applyStage();
+}
+function renderClosedExec(){
+  document.querySelector('.wrap').innerHTML = `<div class="topbar"><div class="brand"><div class="mk">HR</div>
+      <div><b>온보딩 적응 만족도 · 담당임원 결재</b><span>인재개발팀 · Talent Development</span></div></div></div>
+    <div class="card" style="text-align:center;padding:50px 20px">
+      <h2 style="margin:0 0 8px">링크가 종료되었습니다</h2>
+      <p style="color:var(--ink-soft);margin:0">이 결재 링크는 더 이상 응답을 받지 않습니다. 인재개발팀으로 문의해 주세요.</p>
+    </div>`;
+}
+/* 링크 잠금 여부 확인(HR이 시트 '_link_status' 상태 열을 closed로 바꾸면 접근 차단). */
+function checkLinkStatusExec(code, cb){
+  let finished=false; const finish=(v)=>{ if(finished)return; finished=true; cb(v); };
+  window.__linkStatusCb2=(resp)=>{ finish(!!(resp && resp.ok && resp.status==='closed')); };
+  const s=document.createElement('script');
+  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&callback=__linkStatusCb2&_='+Date.now();
+  s.onerror=()=>finish(false);
+  document.body.appendChild(s);
+  setTimeout(()=>finish(false), 2500);
+}
+const _linkCode=_params.get('code');
+if(_linkCode && SUBMIT_URL){
+  checkLinkStatusExec(_linkCode, closed=>{ closed ? renderClosedExec() : startApp(); });
+}else{
+  startApp();
+}
 </script>
 </body>
 </html>
