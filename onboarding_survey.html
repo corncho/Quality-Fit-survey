@@ -146,19 +146,20 @@ const SURVEYS={
   '2_hm':{round:'2차',roundTag:'D+90',role:'팀장(HM)',dual:true,title:'(2차, D+90) 온보딩 적응 자가점검 및 HM 평가',
     desc:'입사자 자가점검을 확인하고 팀장 피드백을 작성합니다. 작성 후 면담을 통해 공유하고 상호 서명합니다.',items:SELF_ITEMS}
 };
-const CL_OPTIONS=['CL1','CL2','CL3','CL4','CL4(p)'];
+const CL_OPTIONS=['CL1','CL2','CL3','CL4','CL4(p)','기술직'];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
-    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경기획팀',
+    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경팀','에너지사업부 안전환경기획팀',
     '에너지사업부 엔지니어링팀','에너지사업부 전원개발추진팀',
     '에너지사업부 신사업개발담당 연료sourcing팀','에너지사업부 신사업개발담당 신사업개발팀',
     '에너지사업부 여수공장 Y TF'
   ]},
   {label:'컨버전스사업부', options:[
-    '컨버전스사업부 SY사업팀','컨버전스사업부 SF사업팀','컨버전스사업부 오션무인화TF',
-    '컨버전스사업부 GEP한국개발팀','컨버전스사업부 GEP사업 시스템솔루션사업팀','컨버전스사업부 GEP사업 그린에너지사업팀',
+    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF',
+    '컨버전스사업부 GEP한국개발팀','컨버전스사업부 경영지원 시스템솔루션사업팀','컨버전스사업부 경영지원 그린에너지사업팀','컨버전스사업부 경영지원 구매팀',
     '컨버전스사업부 SI사업 솔루션사업1팀','컨버전스사업부 SI사업 솔루션사업2팀','컨버전스사업부 SI사업 솔루션사업3팀',
+    '컨버전스사업부 R&D센터 솔루션개발1팀','컨버전스사업부 R&D센터 솔루션개발2팀',
     '컨버전스사업부 안전환경팀','컨버전스사업부 기획팀'
   ]}
 ];
@@ -215,12 +216,14 @@ function deptSelectHTML(p){
   const known=DEPT_ALL.includes(p.dept);
   const cur=p.dept||'';
   const groups=DEPT_GROUPS.map(g=>`<optgroup label="${esc(g.label)}">${g.options.map(o=>`<option ${cur===o?'selected':''}>${esc(o)}</option>`).join('')}</optgroup>`).join('');
+  /* 링크로 전달된 소속값은 목록에 없어도 별도 입력칸 없이, 드롭다운 자체에 그 값을 옵션으로 추가해 선택된 상태로 보여준다. */
+  const extraOpt = (cur && !known) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : '';
   return `<select id="f_dept_sel" onchange="onDeptSelChange()">
-      <option value="">선택</option>${groups}
-      <option value="__other__" ${(cur&&!known)?'selected':''}>기타(직접입력)</option>
+      <option value="">선택</option>${groups}${extraOpt}
+      <option value="__other__">기타(직접입력)</option>
     </select>
-    <input type="text" id="f_dept_other" value="${esc((cur&&!known)?cur:'')}" placeholder="소속(팀)을 직접 입력하세요"
-      style="margin-top:6px" class="${(cur&&!known)?'':'hidden'}">`;
+    <input type="text" id="f_dept_other" value="" placeholder="소속(팀)을 직접 입력하세요"
+      style="margin-top:6px" class="hidden">`;
 }
 function onDeptSelChange(){
   const sel=document.getElementById('f_dept_sel'), other=document.getElementById('f_dept_other');
@@ -231,12 +234,12 @@ function profileFields(){
   const isHM=state.role==='hm',p=state.profile;
   const clSel=CL_OPTIONS.map(c=>`<option ${p.cl===c?'selected':''}>${c}</option>`).join('');
   return `<div class="eyebrow" style="margin-top:24px">3 · 인적사항</div>
+    <label class="fld" style="margin-top:8px"><span class="lb">${isHM?'팀장(HM) 소속':'소속'} <span class="req">*</span></span>${deptSelectHTML(p)}</label>
     <div class="row2">
-      <label class="fld"><span class="lb">${isHM?'팀장(HM) 소속':'소속'} <span class="req">*</span></span>${deptSelectHTML(p)}</label>
       <label class="fld"><span class="lb">${isHM?'팀장 성명':'성명'} <span class="req">*</span></span><input type="text" id="f_name" value="${esc(p.name)}" placeholder="예) 홍길동"></label>
-    </div>
-    <div class="row3">
       ${isHM?`<label class="fld"><span class="lb">입사자 성명 <span class="req">*</span></span><input type="text" id="f_target" value="${esc(p.target)}" placeholder="평가 대상 입사자"></label>`:''}
+    </div>
+    <div class="row2">
       <label class="fld"><span class="lb">입사일 <span class="req">*</span></span><input type="date" id="f_hire" value="${esc(p.hire)}"></label>
       <label class="fld"><span class="lb">${isHM?'입사자 직급(CL)':'직급(CL)'} <span class="req">*</span></span><select id="f_cl"><option value="">선택</option>${clSel}</select></label>
     </div>`;
@@ -419,9 +422,24 @@ function selfHandoffBox(){
 }
 function copyFrom(id,btn){const t=document.getElementById(id);t.select();const done=()=>{const o=btn.textContent;btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=o,1500);};if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(done).catch(()=>{});}else{try{document.execCommand('copy');done();}catch(e){}}}
 function copyPlain(t,btn){const done=()=>{const o=btn.textContent;btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=o,1500);};if(navigator.clipboard){navigator.clipboard.writeText(t).then(done).catch(()=>prompt('복사하세요',t));}else prompt('복사하세요',t);}
+function nextStepHTML(){
+  const map={
+    '1_new':'별도로 하실 일은 없습니다. 참여해 주셔서 감사합니다.',
+    '1_hm':'별도로 하실 일은 없습니다.',
+    '2_new':'아래 <b>"팀장 피드백용 링크"</b>를 담당 팀장님께 전달해 주세요. 팀장님이 이 링크로 들어가면 자가점검 내용이 자동으로 채워집니다.',
+    '2_hm':'별도로 하실 일은 없습니다. 면담 내용은 인재개발팀이 확인합니다.'
+  };
+  const body=map[state.key];
+  if(!body) return '';
+  return `<div class="return-box" style="background:var(--accent-soft);border:1.5px solid var(--accent);border-left-width:6px;padding:20px 22px">
+    <h3 style="color:var(--accent);font-size:16.5px;font-weight:800;margin:0 0 8px">다음 단계</h3>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:var(--ink)">${body}</p>
+  </div>`;
+}
 function renderDone(){
   const s=SURVEYS[state.key];
   const handoff = state.key==='2_new' ? selfHandoffBox() : '';
+  const nextStep = nextStepHTML();
   const p=state.profile, who=(state.role==='hm'?p.target:p.name)||'';
   const thanksMap={
     '1_new':who?`${who}님, 소중한 의견 남겨주셔서 감사합니다. 앞으로의 여정을 응원합니다.`:'',
@@ -437,7 +455,7 @@ function renderDone(){
       <p>${esc(s.round)} ${esc(s.roundTag)} · ${esc(s.role)} 설문이 <b>${esc(HRDEST)}</b>으로 접수되었습니다. 별도로 회신하실 필요 없습니다.</p>
       ${thanks?`<div class="thanks">${esc(thanks)}</div>`:''}
       ${handoff}
-      <div style="margin-top:24px"><button class="btn ghost" onclick="resetAll()">새 설문 작성</button></div>
+      ${nextStep}
     </div>`;
     return;
   }
@@ -457,11 +475,10 @@ function renderDone(){
     </div>
     ${thanks?`<div class="thanks">${esc(thanks)}</div>`:''}
     ${handoff}
-    <div style="margin-top:24px"><button class="btn ghost" onclick="resetAll()">새 설문 작성</button></div>
+    ${nextStep}
   </div>`;
 }
 function copyCode(){const t=document.getElementById('codeBox');t.select();try{document.execCommand('copy');}catch(e){}navigator.clipboard&&navigator.clipboard.writeText(t.value).catch(()=>{});const b=event.target;const o=b.textContent;b.textContent='복사됨 ✓';setTimeout(()=>b.textContent=o,1500);}
-function resetAll(){state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null};window.scrollTo(0,0);render();}
 function initParams(){
   try{
     const q=new URLSearchParams(location.search);

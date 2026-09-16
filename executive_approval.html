@@ -56,6 +56,8 @@
   .crit td{padding:7px 9px;border-top:1px solid var(--line-soft);vertical-align:top}
   .crit td.s{font-weight:800;white-space:nowrap;width:64px}
   .crit tr.hl td{background:var(--accent-soft)}
+  .crit td.clmatch{font-weight:600}
+  .crit tr.hl td.clmatch{font-weight:800;color:var(--accent2)}
   .crit .clbadge{font-size:10.5px;color:var(--ink-soft);padding:6px 9px;background:#fbfcfe;border-top:1px solid var(--line-soft)}
 
   .total-box{display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:linear-gradient(135deg,#0b3d91,#1f6feb);color:#fff;border-radius:12px;padding:22px 24px;margin-top:20px}
@@ -105,33 +107,33 @@
   <div class="card">
     <div class="sec-t"><span class="n">1</span>인적사항</div>
     <div class="people"><div class="who">입사자</div>
-      <div class="grid g4">
-        <label class="fld"><span class="lb">소속</span>
-          <select id="p_dept_sel" onchange="onDeptSelChange('p')"></select>
-          <input type="text" id="p_dept_other" placeholder="소속(팀) 직접 입력" style="margin-top:6px" class="hidden">
-        </label>
-        <label class="fld"><span class="lb">성명</span><input id="p_name"></label>
-        <label class="fld"><span class="lb">입사일</span><input type="date" id="p_hire"></label>
-        <label class="fld"><span class="lb">직급 (CL)</span>
+      <label class="fld" style="margin-top:0"><span class="lb">소속</span>
+        <select id="p_dept_sel" onchange="onDeptSelChange('p')"></select>
+        <input type="text" id="p_dept_other" placeholder="소속(팀) 직접 입력" style="margin-top:6px" class="hidden">
+      </label>
+      <div class="grid g3" style="margin-top:12px">
+        <label class="fld" style="margin-top:0"><span class="lb">성명</span><input id="p_name"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">입사일</span><input type="date" id="p_hire"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">직급 (CL)</span>
           <select id="p_cl" onchange="onCLChange()"><option value="">선택</option>
-            <option>CL1</option><option>CL2</option><option>CL3</option><option>CL4</option><option>CL4(p)</option></select></label>
+            <option>CL1</option><option>CL2</option><option>CL3</option><option>CL4</option><option>CL4(p)</option><option>기술직</option></select></label>
       </div></div>
     <div class="people"><div class="who">팀장 (평가자)</div>
-      <div class="grid g4">
-        <label class="fld"><span class="lb">소속</span>
-          <select id="hm_dept_sel" onchange="onDeptSelChange('hm')"></select>
-          <input type="text" id="hm_dept_other" placeholder="소속(팀) 직접 입력" style="margin-top:6px" class="hidden">
-        </label>
-        <label class="fld"><span class="lb">성명</span><input id="hm_name"></label>
-        <label class="fld"><span class="lb">평가일</span><input type="date" id="hm_date"></label>
-        <label class="fld"><span class="lb">서명 (성명)</span><input id="hm_sign"></label>
+      <label class="fld" style="margin-top:0"><span class="lb">소속</span>
+        <select id="hm_dept_sel" onchange="onDeptSelChange('hm')"></select>
+        <input type="text" id="hm_dept_other" placeholder="소속(팀) 직접 입력" style="margin-top:6px" class="hidden">
+      </label>
+      <div class="grid g3" style="margin-top:12px">
+        <label class="fld" style="margin-top:0"><span class="lb">성명</span><input id="hm_name"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">평가일</span><input type="date" id="hm_date"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">서명 (성명)</span><input id="hm_sign"></label>
       </div></div>
     <div class="people"><div class="who">담당임원 (결재자)</div>
-      <div class="grid g4">
-        <label class="fld"><span class="lb">소속</span><input id="ex_dept"></label>
-        <label class="fld"><span class="lb">성명</span><input id="ex_name"></label>
-        <label class="fld"><span class="lb">평가일</span><input type="date" id="ex_date"></label>
-        <label class="fld"><span class="lb">서명 (성명)</span><input id="ex_sign"></label>
+      <label class="fld" style="margin-top:0"><span class="lb">소속</span><input id="ex_dept"></label>
+      <div class="grid g3" style="margin-top:12px">
+        <label class="fld" style="margin-top:0"><span class="lb">성명</span><input id="ex_name"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">평가일</span><input type="date" id="ex_date"></label>
+        <label class="fld" style="margin-top:0"><span class="lb">서명 (성명)</span><input id="ex_sign"></label>
       </div></div>
     <div class="note">직급(CL)을 선택하면 각 평가 항목의 <b>기준 보기</b>에 해당 직급 기준이 강조되어 표시됩니다. (첨부4 · 직급별/항목별 평가 기준)</div>
   </div>
@@ -146,14 +148,10 @@
     <div id="scoreReveal" style="display:none">
       <div class="total-box">
         <div><div class="lbl">총점</div><div class="big"><span id="totalScore">0</span><small>/100</small></div></div>
-        <div><div class="lbl">등급</div><div class="grade-chip" id="gradeChip">-</div></div>
         <div class="subtotals">
           <div>직무 역량 <b><span id="subJob">0</span>/70</b></div>
           <div>조직 적응 <b><span id="subOrg">0</span>/30</b></div>
         </div>
-      </div>
-      <div class="gradekey">
-        <span>S · 95~100</span><span>A · 90~94</span><span>B+ · 80~89</span><span>B · 70~79</span><span>C · 70 미만</span>
       </div>
     </div>
 
@@ -164,27 +162,18 @@
   <!-- 3. 담당임원 평가 -->
   <div class="card" id="execCard">
     <div class="sec-t"><span class="n">3</span>담당임원 평가</div>
-    <div class="grid g2" style="align-items:end">
-      <label class="fld"><span class="lb">점수 (0~100 기입)</span>
-        <input type="number" id="ex_score" min="0" max="100" oninput="onExecScore()" placeholder="예) 92"></label>
-      <label class="fld"><span class="lb">등급 (자동 환산)</span>
-        <input id="ex_grade" readonly style="background:var(--line-soft);font-weight:800"></label>
-    </div>
+    <label class="fld"><span class="lb">점수 (0~100 기입)</span>
+      <input type="number" id="ex_score" min="0" max="100" oninput="onExecScore()" placeholder="예) 92"></label>
+    <input type="hidden" id="ex_grade">
     <label class="fld" style="margin-top:12px"><span class="lb">담당임원 평가 의견</span>
       <textarea id="ex_comment" style="min-height:80px"></textarea></label>
   </div>
 
   <div class="actions">
-    <button class="btn ghost" onclick="window.print()">인쇄 / PDF 저장</button>
-    <button class="btn ghost" onclick="exportCSV()">결과 CSV 저장</button>
     <button class="btn primary" id="makeLinkBtn" onclick="makeExecLink()">임원 결재 링크 만들기</button>
     <button class="btn primary" id="submitBtn" onclick="submitToSheet()" style="display:none">결재 완료 · 시트로 제출</button>
   </div>
   <div id="linkOut" style="display:none;margin-top:12px"></div>
-  <div class="note" id="assumptionNote">
-    <b>점수 산정식:</b> 항목별 취득점수 = 배점 × (선택 점수 ÷ 5). 예) 성과 달성도(25점) 5점 선택 → 25점, 3점 선택 → 15점.
-    총점은 직무 역량(70) + 조직 적응(30) 합계이며 위 등급 기준으로 자동 환산합니다.
-  </div>
 </div>
 
 <script>
@@ -219,15 +208,16 @@ const CLCOLS=[['CL1','CL1'],['CL23','CL2·3'],['CL4','CL4'],['CL4p','CL4(p)']];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
-    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경기획팀',
+    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경팀','에너지사업부 안전환경기획팀',
     '에너지사업부 엔지니어링팀','에너지사업부 전원개발추진팀',
     '에너지사업부 신사업개발담당 연료sourcing팀','에너지사업부 신사업개발담당 신사업개발팀',
     '에너지사업부 여수공장 Y TF'
   ]},
   {label:'컨버전스사업부', options:[
-    '컨버전스사업부 SY사업팀','컨버전스사업부 SF사업팀','컨버전스사업부 오션무인화TF',
-    '컨버전스사업부 GEP한국개발팀','컨버전스사업부 GEP사업 시스템솔루션사업팀','컨버전스사업부 GEP사업 그린에너지사업팀',
+    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF',
+    '컨버전스사업부 GEP한국개발팀','컨버전스사업부 경영지원 시스템솔루션사업팀','컨버전스사업부 경영지원 그린에너지사업팀','컨버전스사업부 경영지원 구매팀',
     '컨버전스사업부 SI사업 솔루션사업1팀','컨버전스사업부 SI사업 솔루션사업2팀','컨버전스사업부 SI사업 솔루션사업3팀',
+    '컨버전스사업부 R&D센터 솔루션개발1팀','컨버전스사업부 R&D센터 솔루션개발2팀',
     '컨버전스사업부 안전환경팀','컨버전스사업부 기획팀'
   ]}
 ];
@@ -249,10 +239,16 @@ function getDept(prefix){
 function setDept(prefix, val, disable){
   const sel=document.getElementById(prefix+'_dept_sel'), other=document.getElementById(prefix+'_dept_other');
   if(!sel) return;
-  const known=DEPT_ALL.includes(val||'');
-  sel.value = val ? (known ? val : '__other__') : '';
-  other.value = (val && !known) ? val : '';
-  other.classList.toggle('hidden', known || !val);
+  if(val){
+    /* 링크로 전달된 소속값은 목록에 없어도 별도 입력칸을 보여주지 않고, 드롭다운 자체에 그 값을 옵션으로 추가해 선택된 상태로 보여준다. */
+    if(!DEPT_ALL.includes(val) && !Array.from(sel.options).some(o=>o.value===val)){
+      const opt=document.createElement('option'); opt.value=val; opt.textContent=val;
+      sel.insertBefore(opt, sel.querySelector('option[value="__other__"]'));
+    }
+    sel.value=val; other.value=''; other.classList.add('hidden');
+  }else{
+    sel.value=''; other.value=''; other.classList.add('hidden');
+  }
   if(disable){ sel.disabled=true; other.disabled=true; }
 }
 
@@ -333,7 +329,7 @@ function critTable(key){
   const g=clGroup();
   let rows='';
   [5,4,3,2,1].forEach(sv=>{
-    const cells=CLCOLS.map(([code])=>`<td${g===code?' style="font-weight:600"':''}>${esc(CRIT[key][sv][code])}</td>`).join('');
+    const cells=CLCOLS.map(([code])=>`<td${g===code?' class="clmatch"':''}>${esc(CRIT[key][sv][code])}</td>`).join('');
     rows+=`<tr class="${scores[key]===sv?'hl':''}" data-s="${sv}"><td class="s">${sv}점</td>${cells}</tr>`;
   });
   const head=CLCOLS.map(([code,lbl])=>`<th${g===code?' style="color:var(--accent2)"':''}>${lbl}</th>`).join('');
@@ -357,14 +353,10 @@ function recalc(){
     const v=scores[it.key]; if(!v) return;
     const e=it.bp*v/5; if(cat.name==='직무 역량') job+=e; else org+=e;
   }));
-  const total=job+org, g=grade(total);
+  const total=job+org;
   document.getElementById('subJob').textContent=job;
   document.getElementById('subOrg').textContent=org;
   document.getElementById('totalScore').textContent=total;
-  const chip=document.getElementById('gradeChip');
-  const allDone=CATS.flatMap(c=>c.items).every(it=>scores[it.key]);
-  chip.textContent=allDone?g:'-';
-  chip.style.background=allDone?gradeColor(g):'rgba(255,255,255,.16)';
   const doneCount=CATS.flatMap(c=>c.items).filter(it=>scores[it.key]).length;
   const totalCount=CATS.flatMap(c=>c.items).length;
   const prog=document.getElementById('hmProgress');
@@ -456,17 +448,6 @@ function toFlatRecord(d){
   rec['임원_서명']=d.담당임원?.서명||'';
   return rec;
 }
-function exportCSV(){
-  const d=collect(); const row={};
-  row['입사자소속']=d.입사자.소속; row['입사자성명']=d.입사자.성명; row['입사일']=d.입사자.입사일; row['직급']=d.입사자.직급;
-  Object.entries(d.팀장평가).forEach(([k,v])=>{row[k+'_선택']=v.선택; row[k+'_취득']=v.취득;});
-  row['직무역량']=d.직무역량점수; row['조직적응']=d.조직적응점수; row['총점']=d.총점; row['팀장환산등급']=d.등급;
-  row['팀장의견']=d.팀장.의견; row['팀장서명']=d.팀장.서명;
-  row['임원점수']=d.담당임원.점수; row['임원등급']=d.담당임원.등급; row['임원의견']=d.담당임원.의견; row['임원서명']=d.담당임원.서명;
-  const cols=Object.keys(row); const cell=v=>{v=(v??'').toString();return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const csv=cols.join(',')+'\n'+cols.map(c=>cell(row[c])).join(',');
-  dl(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}), `결재_${d.입사자.성명||'입사자'}_${d.총점}점_${d.등급}.csv`);
-}
 function saveJSON(){
   const d=collect();
   dl(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}), `결재_${d.입사자.성명||'입사자'}.json`);
@@ -485,7 +466,7 @@ async function submitToSheet(){
     await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'exec_final',record:rec})});
     btn.textContent='결재 완료 ✓';
     document.getElementById('linkOut').style.display='block';
-    document.getElementById('linkOut').innerHTML='<div class="note" style="background:var(--ok-soft);color:var(--ok);border:1px solid #bfe3d0"><b>결재가 접수되었습니다.</b> 인재개발팀 시트에 자동으로 반영되었습니다.</div>';
+    document.getElementById('linkOut').innerHTML='<div class="note" style="background:var(--ok-soft);color:var(--ok);border:1px solid #bfe3d0"><b>결재가 접수되었습니다.</b> 인재개발팀 시트에 자동으로 반영되었습니다.</div><div class="note" style="margin-top:10px;background:var(--accent-soft);color:var(--ink);border:1.5px solid var(--accent);border-left-width:6px;padding:16px 18px;font-size:15px;line-height:1.6"><div style="color:var(--accent);font-size:16.5px;font-weight:800;margin-bottom:6px">다음 단계</div>별도로 하실 일은 없습니다. 감사합니다.</div>';
   }catch(e){
     btn.disabled=false; btn.textContent=orig;
     alert('전송이 차단된 것 같습니다. 결재 데이터(JSON)로 저장해 회신해 주세요.'); saveJSON();
@@ -514,7 +495,8 @@ function makeExecLink(){
       <button class="btn ghost sm" style="padding:8px 13px" onclick="copyText('${code}',this)">코드 복사</button>
     </div>
     <div class="muted" style="margin-top:8px;font-size:11.5px">링크가 메신저에서 잘리면, 코드를 복사해 임원이 이 툴 상단의 "임원 결재 코드로 이어받기"에 붙여넣도록 안내하세요.</div>
-  </div>`;
+  </div>
+  <div class="note" style="margin-top:10px;background:var(--accent-soft);color:var(--ink);border:1.5px solid var(--accent);border-left-width:6px;padding:16px 18px;font-size:15px;line-height:1.6"><div style="color:var(--accent);font-size:16.5px;font-weight:800;margin-bottom:6px">다음 단계</div>위 링크(또는 코드)를 담당임원님께 직접 전달해 주세요. 임원님이 결재를 완료하면 별도로 하실 일은 없습니다.</div>`;
   out.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function copyText(t,btn){
@@ -564,14 +546,15 @@ function applyStage(){
     g('execCard').style.display='none';
     g('makeLinkBtn').style.display=''; g('submitBtn').style.display='none';
     g('execEntryBtn').style.display='';
-    const set=(id,v)=>{if(v){const el=g(id); if(el)el.value=v;}};
+    const set=(id,v)=>{const el=g(id); if(el){ if(v)el.value=v; el.disabled=true; }};
     set('p_name',_params.get('target'));
-    setDept('p',_params.get('dept'));
+    setDept('p',_params.get('dept'),true);
     set('p_hire',_params.get('hire'));
     set('hm_name',_params.get('hm'));
-    setDept('hm',_params.get('hmdept')||_params.get('dept'));
+    setDept('hm',_params.get('hmdept')||_params.get('dept'),true);
     const cl=_params.get('cl');
-    if(cl){ const el=g('p_cl'); if(el){ el.value=cl; onCLChange(); } }
+    const clEl=g('p_cl');
+    if(clEl){ if(cl){ clEl.value=cl; onCLChange(); } clEl.disabled=true; }
     g('hmProgress').style.display=''; g('scoreReveal').style.display='none';
     showMood();
   }else{
@@ -585,12 +568,12 @@ function applyStage(){
     const cl=g('p_cl'); if(cl){cl.value=d.입사자?.직급||'';cl.disabled=true;}
     setDept('hm',d.팀장?.소속,true);set('hm_name',d.팀장?.성명);set('hm_date',d.팀장?.평가일);set('hm_sign',d.팀장?.서명);
     ['ex_dept','ex_name','ex_date','ex_sign','ex_score','ex_comment'].forEach(id=>{const el=g(id);if(el)el.disabled=false;});
+    const exComment=g('ex_comment'); if(exComment) exComment.placeholder=`이 평가는 ${d.입사자?.성명||'입사자'}님의 성장을 돕는 소중한 자료로 쓰입니다. 솔직하고 애정 어린 의견을 부탁드립니다.`;
     g('hmLead').textContent='팀장이 작성한 평가 결과입니다. 아래 담당임원 결재란에 결재해 주세요.';
     g('evalArea').innerHTML=hmSummaryHTML(d);
     g('subJob').textContent=d.직무역량점수??0;
     g('subOrg').textContent=d.조직적응점수??0;
     g('totalScore').textContent=d.총점??0;
-    const chip=g('gradeChip'); chip.textContent=d.등급||'-'; chip.style.background='rgba(255,255,255,.16)';
     const hc=document.getElementById('hm_comment'); if(hc&&hc.closest('label'))hc.closest('label').style.display='none';
     g('makeLinkBtn').style.display='none'; g('submitBtn').style.display='';
     showMood();
