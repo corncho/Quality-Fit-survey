@@ -183,6 +183,12 @@ const SUBMIT_URL='https://script.google.com/macros/s/AKfycbzlnIEmzzjXChTsjjyRvaF
 const _params=new URLSearchParams(location.search);
 let STAGE = _params.get('stage')==='exec' ? 'exec' : 'hm';
 let HM_DATA = null;
+/* 팀장 데이터를 통째로 담은 d= 링크는 메신저/메일이 길면 잘라먹어 "코드 붙여넣기" 화면으로
+   떨어지는 문제가 있었다. 서버(_pending_approval)에 원래부터 있던 code(예: 2E-김지연-0601)로
+   저장해두고 링크에는 그 code만 실어 전달한다(d=는 하위호환으로 계속 지원). 이 code를 그대로
+   '임원결재' 시트의 행 식별자로도 재사용해서, 팀장 완료 시점과 임원 완료 시점을 같은 행에
+   단계적으로 기록할 수 있게 한다. */
+const _linkCode = _params.get('code');
 (function(){
   const d=_params.get('d');
   if(STAGE==='exec' && d){ try{ HM_DATA=decData(d); }catch(e){ STAGE='hm'; } }
@@ -422,7 +428,7 @@ function toFlatRecord(d){
   const itemKeyMap={'성과 달성도':25,'직무 전문성':15,'직무 적합성':15,'확장 가능성':15,'조직 적합성':10,'협업 능력':10,'책임감/성실성':10};
   const rec={
     '입사자_소속': d.입사자.소속||'', '입사자_성명': d.입사자.성명||'',
-    '입사일': d.입사자.입사일||'', '직급': d.입사자.직급||''
+    '입사일': d.입사자.입사일||''
   };
   Object.keys(itemKeyMap).forEach(name=>{
     const bp=itemKeyMap[name];
@@ -463,7 +469,7 @@ async function submitToSheet(){
   }
   try{
     const rec=toFlatRecord(d);
-    await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'exec_final',record:rec})});
+    await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'exec_final',_code:_linkCode,record:rec})});
     btn.textContent='결재 완료 ✓';
     document.getElementById('linkOut').style.display='block';
     document.getElementById('linkOut').innerHTML='<div class="note" style="background:var(--ok-soft);color:var(--ok);border:1px solid #bfe3d0"><b>결재가 접수되었습니다.</b> 인재개발팀 시트에 자동으로 반영되었습니다.</div><div class="note" style="margin-top:10px;background:var(--accent-soft);color:var(--ink);border:1.5px solid var(--accent);border-left-width:6px;padding:16px 18px;font-size:15px;line-height:1.6"><div style="color:var(--accent);font-size:16.5px;font-weight:800;margin-bottom:6px">다음 단계</div>별도로 하실 일은 없습니다. 감사합니다.</div>';
@@ -479,12 +485,23 @@ function hmRequiredOk(){
   const allScored=CATS.flatMap(c=>c.items).every(it=>scores[it.key]);
   return allScored && g('p_name') && g('p_cl') && g('hm_name') && g('hm_sign');
 }
-function makeExecLink(){
+/* 팀장 완료 시점을 '임원결재' 시트에도 즉시 기록해서(상태:팀장완료(임원대기)) HR이
+   "팀장은 했는데 임원이 아직 안 한" 케이스를 구분할 수 있게 한다. 임원이 최종 제출하면
+   같은 code로 같은 행이 갱신된다(upsertByCode_, 아래 submitToSheet 참고). */
+async function sendExecHandoff(payload){
+  if(!SUBMIT_URL || !_linkCode) return;
+  try{
+    await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({_kind:'exec_stage1',_code:_linkCode,teamLead:payload,record:toFlatRecord(payload)})});
+  }catch(e){}
+}
+async function makeExecLink(){
   if(!hmRequiredOk()){ alert('임원에게 넘기기 전에 7개 항목 점수와 입사자·팀장 정보(성명/직급/서명)를 모두 채워 주세요.'); return; }
-  const d=encData(collect());
+  const payload=collect();
+  await sendExecHandoff(payload);
   const base=location.origin+location.pathname;
-  const link=base+'?stage=exec&d='+encodeURIComponent(d);
-  const code='HMAPPR1:'+d;
+  const link=base+'?stage=exec&code='+encodeURIComponent(_linkCode||'');
+  const code='HMAPPR1:'+encData(payload); /* 오프라인 대비 완전 수동 코드는 기존 방식 유지 */
   const out=document.getElementById('linkOut');
   out.style.display='block';
   out.innerHTML=`<div class="note" style="line-height:1.6">
@@ -603,11 +620,31 @@ function checkLinkStatusExec(code, cb){
   document.body.appendChild(s);
   setTimeout(()=>finish(false), 2500);
 }
-const _linkCode=_params.get('code');
-if(_linkCode && SUBMIT_URL){
-  checkLinkStatusExec(_linkCode, closed=>{ closed ? renderClosedExec() : startApp(); });
+/* eref 코드로 서버(_pending_approval 시트)에서 팀장 데이터를 조회한다(JSONP). */
+function loadExecRef(code,done){
+  let finished=false; const finish=()=>{ if(finished)return; finished=true; done(); };
+  window.__execRefCb=(resp)=>{
+    if(resp && resp.ok && resp.data && resp.data.teamLead){ HM_DATA=resp.data.teamLead; }
+    else{ STAGE='hm'; } /* 조회 실패 시 예전 d= 파싱 실패와 동일하게 1단계로 되돌림 */
+    finish();
+  };
+  const s=document.createElement('script');
+  s.src=SUBMIT_URL+'?action=getPending&code='+encodeURIComponent(code)+'&callback=__execRefCb&_='+Date.now();
+  s.onerror=()=>{ STAGE='hm'; finish(); };
+  document.body.appendChild(s);
+  setTimeout(()=>{ if(!HM_DATA) STAGE='hm'; finish(); }, 3000);
+}
+function bootAfterExecRef(){
+  if(_linkCode && SUBMIT_URL){
+    checkLinkStatusExec(_linkCode, closed=>{ closed ? renderClosedExec() : startApp(); });
+  }else{
+    startApp();
+  }
+}
+if(STAGE==='exec' && !HM_DATA && _linkCode && SUBMIT_URL){
+  loadExecRef(_linkCode, bootAfterExecRef);
 }else{
-  startApp();
+  bootAfterExecRef();
 }
 </script>
 </body>
