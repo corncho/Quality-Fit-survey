@@ -74,7 +74,14 @@
   .err-banner.show{display:block}
   .muted{color:var(--ink-soft);font-size:13px}
   .hidden{display:none!important}
-  @media(max-width:640px){.wrap{padding:18px 14px 70px}.grid2,.row2,.row3,.dual .cols{grid-template-columns:1fr}.likert{grid-template-columns:repeat(5,1fr);gap:5px}.lk{padding:9px 2px}.lk .ll{display:none}.card{padding:20px}}
+  input:disabled,select:disabled,textarea:disabled{background:#f1f3f7;color:#7a8497;cursor:not-allowed;-webkit-text-fill-color:#7a8497;opacity:1}
+  .pcols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  .pcol{border:1px solid var(--line);border-radius:12px;padding:6px 14px 14px}
+  .pcol.locked{background:#fafbfd}
+  .pcol .ph{font-size:12px;font-weight:800;color:var(--accent);margin-top:10px}
+  .pcol.locked .ph{color:var(--ink-soft)}
+  .pcol .ph span{font-weight:600;color:var(--ink-soft);margin-left:6px}
+  @media(max-width:640px){.wrap{padding:18px 14px 70px}.grid2,.row2,.row3,.dual .cols,.pcols{grid-template-columns:1fr}.likert{grid-template-columns:repeat(5,1fr);gap:5px}.lk{padding:9px 2px}.lk .ll{display:none}.card{padding:20px}}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -146,7 +153,7 @@ const SURVEYS={
   '2_hm':{round:'2차',roundTag:'D+90',role:'팀장(HM)',dual:true,title:'(2차, D+90) 온보딩 적응 자가점검 및 HM 평가',
     desc:'입사자 자가점검을 확인하고 팀장 피드백을 작성합니다. 작성 후 면담을 통해 공유하고 상호 서명합니다.',items:SELF_ITEMS}
 };
-const CL_OPTIONS=['CL1','CL2','CL3','CL4','CL4(p)','기술직'];
+const CL_OPTIONS=['CL1','CL2','CL3','CL4','CL4(p)','기술직','계약직'];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
@@ -164,7 +171,7 @@ const DEPT_GROUPS=[
   ]}
 ];
 const DEPT_ALL=DEPT_GROUPS.flatMap(g=>g.options);
-let state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null};
+let state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null,locked:{}};
 const app=document.getElementById('app');
 const esc=s=>(s??'').toString().replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 
@@ -212,18 +219,19 @@ function renderEntry(){
   </div>`;
 }
 function statePill(){const s=SURVEYS[state.key];return `<span class="tag">${s.round} ${s.roundTag}</span>${s.role}`;}
-function deptSelectHTML(p){
+function deptSelectHTML(p,idBase,onchg){
+  idBase=idBase||'f'; onchg=onchg||'onDeptSelChange()';
   const known=DEPT_ALL.includes(p.dept);
   const cur=p.dept||'';
   const groups=DEPT_GROUPS.map(g=>`<optgroup label="${esc(g.label)}">${g.options.map(o=>`<option ${cur===o?'selected':''}>${esc(o)}</option>`).join('')}</optgroup>`).join('');
   /* 링크로 전달된 소속값은 목록에 없어도 별도 입력칸 없이, 드롭다운 자체에 그 값을 옵션으로 추가해 선택된 상태로 보여준다. */
   const extraOpt = (cur && !known) ? `<option value="${esc(cur)}" selected>${esc(cur)}</option>` : '';
-  return `<select id="f_dept_sel" onchange="onDeptSelChange()">
+  return `<select id="${idBase}_dept_sel" onchange="${onchg}">
       <option value="">선택</option>${groups}${extraOpt}
       <option value="__other__">기타(직접입력)</option>
     </select>
-    <input type="text" id="f_dept_other" value="" placeholder="소속(팀)을 직접 입력하세요"
-      style="margin-top:6px" class="hidden">`;
+    <input type="text" id="${idBase}_dept_other" value="" placeholder="소속(팀)을 직접 입력하세요"
+      style="margin-top:6px" class="hidden" oninput="${onchg}">`;
 }
 function onDeptSelChange(){
   const sel=document.getElementById('f_dept_sel'), other=document.getElementById('f_dept_other');
@@ -231,17 +239,18 @@ function onDeptSelChange(){
   if(sel.value==='__other__') other.focus();
 }
 function profileFields(){
-  const isHM=state.role==='hm',p=state.profile;
+  const isHM=state.role==='hm',p=state.profile,L=state.locked||{};
+  const dis=k=>L[k]?'disabled':'';
   const clSel=CL_OPTIONS.map(c=>`<option ${p.cl===c?'selected':''}>${c}</option>`).join('');
   return `<div class="eyebrow" style="margin-top:24px">3 · 인적사항</div>
     <label class="fld" style="margin-top:8px"><span class="lb">${isHM?'팀장(HM) 소속':'소속'} <span class="req">*</span></span>${deptSelectHTML(p)}</label>
     <div class="row2">
       <label class="fld"><span class="lb">${isHM?'팀장 성명':'성명'} <span class="req">*</span></span><input type="text" id="f_name" value="${esc(p.name)}" placeholder="예) 홍길동"></label>
-      ${isHM?`<label class="fld"><span class="lb">입사자 성명 <span class="req">*</span></span><input type="text" id="f_target" value="${esc(p.target)}" placeholder="평가 대상 입사자"></label>`:''}
+      ${isHM?`<label class="fld"><span class="lb">입사자 성명 <span class="req">*</span></span><input type="text" id="f_target" value="${esc(p.target)}" placeholder="평가 대상 입사자" ${dis('target')}></label>`:''}
     </div>
     <div class="row2">
-      <label class="fld"><span class="lb">입사일 <span class="req">*</span></span><input type="date" id="f_hire" value="${esc(p.hire)}"></label>
-      <label class="fld"><span class="lb">${isHM?'입사자 직급(CL)':'직급(CL)'} <span class="req">*</span></span><select id="f_cl"><option value="">선택</option>${clSel}</select></label>
+      <label class="fld"><span class="lb">입사일 <span class="req">*</span></span><input type="date" id="f_hire" value="${esc(p.hire)}" ${dis('hire')}></label>
+      <label class="fld"><span class="lb">${isHM?'입사자 직급(CL)':'직급(CL)'} <span class="req">*</span></span><select id="f_cl" ${dis('cl')}><option value="">선택</option>${clSel}</select></label>
     </div>`;
 }
 function pickRound(r){state.round=r;syncKey();render();}
@@ -281,6 +290,7 @@ function standardSurvey(s){
 }
 function dualSurvey(s){
   const hasIn = state.selfIn && state.selfIn.s;
+  if(state.profile.target) state.answers.signNew=state.profile.target;   /* 입사자 서명은 팀장이 쓰는 칸이 아니므로 입사자 성명으로 자동 입력 후 잠금 */
   let html='';
   if(!hasIn){
     html+=`<div class="return-box" style="text-align:left;background:var(--accent-soft);border-color:#cdddfb;margin-bottom:6px">
@@ -300,7 +310,7 @@ function dualSurvey(s){
     <p class="hint" style="margin:8px 0 4px">입사자와 팀장 간 면담을 통해 피드백 내용을 공유하였음을 확인하며 서명(성명 입력)합니다.</p>
     <div class="row3">
       <label class="fld"><span class="lb">면담일 <span class="req">*</span></span><input type="date" oninput="setText('meetDate',this.value)" value="${esc(state.answers.meetDate||'')}"></label>
-      <label class="fld"><span class="lb">입사자 서명 <span class="req">*</span></span><input type="text" oninput="setText('signNew',this.value)" value="${esc(state.answers.signNew||'')}" placeholder="입사자 성명"></label>
+      <label class="fld"><span class="lb">입사자 서명 <span style="font-weight:500;color:var(--ink-soft)">(자동 입력)</span></span><input type="text" value="${esc(state.answers.signNew||'')}" placeholder="입사자 성명" disabled></label>
       <label class="fld"><span class="lb">팀장 서명 <span class="req">*</span></span><input type="text" oninput="setText('signHM',this.value)" value="${esc(state.answers.signHM||'')}" placeholder="팀장 성명"></label>
     </div></div>`;
   return shell(s,html);
@@ -310,11 +320,28 @@ function loadSelfByCode(){
   if(!raw)return;
   const str=raw.trim().replace(/^SELF1:/,'');
   try{
-    state.selfIn=JSON.parse(b64urlDec(str));
-    const p=state.selfIn.p||{};
-    if(p.name)state.profile.target=p.name; if(p.cl)state.profile.cl=p.cl; if(p.hire)state.profile.hire=p.hire; if(p.dept&&!state.profile.dept)state.profile.dept=p.dept;
+    applySelfIn(JSON.parse(b64urlDec(str)));
     render();
   }catch(e){ alert('코드를 인식하지 못했습니다. 다시 확인해 주세요.'); }
+}
+/* 팀장(HM) 화면 인적사항: 입사자 칸은 잠그고, 지금 작성하는 팀장 본인 칸(소속/성명)만 입력 가능 */
+function syncHmProfile(){
+  const sel=document.getElementById('h_dept_sel'), oth=document.getElementById('h_dept_other'), nm=document.getElementById('h_name');
+  if(sel){ if(oth) oth.classList.toggle('hidden', sel.value!=='__other__'); state.profile.dept = sel.value==='__other__' ? ((oth&&oth.value)||'').trim() : sel.value; }
+  if(nm) state.profile.name=nm.value.trim();
+}
+function hmPanel(){
+  const p=state.profile;
+  return `<div class="theme"><div class="theme-h">인적사항</div>
+    <div class="pcols">
+      <div class="pcol locked"><div class="ph">입사자<span>(수정 불가)</span></div>
+        <label class="fld" style="margin-top:8px"><span class="lb">성명</span><input type="text" value="${esc(p.target)}" disabled></label>
+        <div class="row2"><label class="fld"><span class="lb">입사일</span><input type="date" value="${esc(p.hire)}" disabled></label>
+        <label class="fld"><span class="lb">직급(CL)</span><input type="text" value="${esc(p.cl)}" disabled></label></div></div>
+      <div class="pcol"><div class="ph">팀장 (작성자)<span>(직접 입력)</span></div>
+        <label class="fld" style="margin-top:8px"><span class="lb">소속 <span class="req">*</span></span>${deptSelectHTML(p,'h','syncHmProfile()')}</label>
+        <label class="fld"><span class="lb">성명 <span class="req">*</span></span><input type="text" id="h_name" value="${esc(p.name)}" placeholder="팀장 성명" oninput="syncHmProfile()"></label></div>
+    </div></div>`;
 }
 function shell(s,inner){
   const who=s.role==='팀장(HM)'?(state.profile.target||'-')+' ('+(state.profile.cl||'-')+')':state.profile.name+' ('+(state.profile.cl||'-')+')';
@@ -324,6 +351,7 @@ function shell(s,inner){
     ${s.desc?`<p class="lead" style="margin-bottom:8px">${esc(s.desc)}</p>`:''}
     <div class="muted" style="font-size:12.5px;margin-bottom:14px">대상: ${esc(who)} · ${esc(state.profile.dept)} · 입사일 ${esc(state.profile.hire)}</div>
     ${mood?`<div class="mood">${esc(mood)}</div>`:''}
+    ${s.role==='팀장(HM)'?hmPanel():''}
     ${inner}
     <div class="err-banner" id="surveyErr"></div>
     <div class="prog-bottom">
@@ -365,10 +393,27 @@ function submissionCode(){
   if(state.key==='2_hm'){ const p=state.profile; if(p.target&&p.hire) return '2H-'+p.target+'-'+mmddOf(p.hire); }
   return '';
 }
+/* 제출 직전에 링크가 닫혔는지 다시 확인한다(열어 둔 화면에서 관리자가 실시간으로 닫은 경우). 응답이 늦거나 실패하면 막지 않는다(fail-open). */
+function linkClosedNow(){
+  return new Promise(resolve=>{
+    if(!state.linkCode||!SUBMIT_URL){ resolve(false); return; }
+    let done=false; const fin=v=>{ if(done)return; done=true; resolve(v); };
+    const cb='__linkNow'+Date.now();
+    window[cb]=(resp)=>fin(!!(resp&&resp.ok&&resp.status==='closed'));
+    const s=document.createElement('script');
+    s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(state.linkCode)+'&hire='+encodeURIComponent(state.profile.hire||'')+'&callback='+cb+'&_='+Date.now();
+    s.onerror=()=>fin(false); document.body.appendChild(s); setTimeout(()=>fin(false),2500);
+  });
+}
 async function submitSurvey(){
+  if(SURVEYS[state.key].role==='팀장(HM)'){
+    syncHmProfile();
+    if(!state.profile.dept||!state.profile.name){const e=document.getElementById('surveyErr');e.textContent='팀장 소속과 성명을 입력해 주세요.';e.classList.add('show');window.scrollTo(0,0);return;}
+  }
   const keys=requiredKeys(),missing=keys.filter(k=>{const v=state.answers[k];return v===undefined||v==='';});
   if(missing.length){const e=document.getElementById('surveyErr');e.textContent=`미작성 항목이 ${missing.length}개 있습니다. 모든 문항을 작성해 주세요.`;e.classList.add('show');window.scrollTo(0,document.body.scrollHeight);return;}
   const btn=event&&event.target;if(btn){btn.disabled=true;btn.textContent='제출 중...';}
+  if(await linkClosedNow()){ state.step='closed'; window.scrollTo(0,0); render(); return; }
   const rec=buildRecord();state.lastRec=rec;
   if(SUBMIT_URL){
     try{
@@ -450,11 +495,9 @@ function selfHandoffBox(){
 function copyFrom(id,btn){const t=document.getElementById(id);t.select();const done=()=>{const o=btn.textContent;btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=o,1500);};if(navigator.clipboard){navigator.clipboard.writeText(t.value).then(done).catch(()=>{});}else{try{document.execCommand('copy');done();}catch(e){}}}
 function copyPlain(t,btn){const done=()=>{const o=btn.textContent;btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=o,1500);};if(navigator.clipboard){navigator.clipboard.writeText(t).then(done).catch(()=>prompt('복사하세요',t));}else prompt('복사하세요',t);}
 function nextStepHTML(){
+  /* 다음에 해야 할 일이 있는 경우에만 안내 박스를 보여준다(할 일이 없으면 박스를 띄우지 않음) */
   const map={
-    '1_new':'별도로 하실 일은 없습니다. 참여해 주셔서 감사합니다.',
-    '1_hm':'별도로 하실 일은 없습니다.',
-    '2_new':'아래 <b>"팀장 피드백용 링크"</b>를 담당 팀장님께 전달해 주세요. 팀장님이 이 링크로 들어가면 자가점검 내용이 자동으로 채워집니다.',
-    '2_hm':'별도로 하실 일은 없습니다. 면담 내용은 인재개발팀이 확인합니다.'
+    '2_new':'아래 <b>"팀장 피드백용 링크"</b>를 담당 팀장님께 전달해 주세요. 팀장님이 이 링크로 들어가면 자가점검 내용이 자동으로 채워집니다.'
   };
   const body=map[state.key];
   if(!body) return '';
@@ -509,9 +552,9 @@ function copyCode(){const t=document.getElementById('codeBox');t.select();try{do
 function applySelfIn(selfIn){
   state.selfIn=selfIn;
   const p=selfIn.p||{};
-  if(p.name)state.profile.target=p.name;
-  if(p.cl)state.profile.cl=p.cl;
-  if(p.hire)state.profile.hire=p.hire;
+  if(p.name){state.profile.target=p.name;state.locked.target=true;}
+  if(p.cl){state.profile.cl=p.cl;state.locked.cl=true;}
+  if(p.hire){state.profile.hire=p.hire;state.locked.hire=true;}
   if(p.dept&&!state.profile.dept)state.profile.dept=p.dept;
 }
 /* 링크에 차수·역할·핵심 인적사항이 모두 담겨 있으면, 선택 화면 없이 곧바로 설문으로 진입한다.
@@ -535,6 +578,9 @@ function initParams(){
     syncKey();
     ['dept','name','target','cl','hire'].forEach(k=>{const v=q.get(k); if(v)state.profile[k]=v;});
     const code=q.get('code'); if(code)state.linkCode=code;
+    /* 팀장 화면: 링크로 받은 입사자 정보(성명/입사일/직급)는 팀장이 바꿀 수 없게 잠근다. 계약직 표기는 누구도 바꿀 수 없다. */
+    if(state.role==='hm'){ ['target','hire','cl'].forEach(k=>{ if(state.profile[k]) state.locked[k]=true; }); }
+    if(state.profile.cl==='계약직') state.locked.cl=true;
     /* 예전 링크 호환: role=hm인데 name 대신 hm 파라미터로 팀장명을 보낸 경우 */
     if(state.role==='hm' && !state.profile.name){ const hmName=q.get('hm'); if(hmName)state.profile.name=hmName; }
     /* 새 방식: 자가점검 데이터를 서버에 저장하고 짧은 코드만 링크에 담는다(scref).
@@ -573,7 +619,7 @@ function checkLinkStatus(code, done){
     finish();
   };
   const s=document.createElement('script');
-  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&callback=__linkStatusCb&_='+Date.now();
+  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&hire='+encodeURIComponent(state.profile.hire||'')+'&callback=__linkStatusCb&_='+Date.now();
   s.onerror=finish;
   document.body.appendChild(s);
   setTimeout(finish, 2500); // 응답이 늦으면 막지 않고 통과
