@@ -229,7 +229,7 @@ function moodMsg(){
 
 function render(){if(state.step==='entry')return renderEntry();if(state.step==='survey')return renderSurvey();if(state.step==='done')return renderDone();if(state.step==='closed')return renderClosed();if(state.step==='alreadyDone')return renderAlreadyDone();if(state.step==='checking')return renderChecking();if(state.step==='waitSelf')return renderWaitSelf();if(state.step==='selfFail')return renderSelfFail();}
 function renderChecking(){
-  app.innerHTML=`<div class="card" style="text-align:center;padding:50px 20px;color:var(--ink-soft)">확인 중…</div>`;
+  app.innerHTML=`<div class="card" style="text-align:center;padding:50px 20px;color:var(--ink-soft)">확인 중…<div style="margin-top:10px;font-size:12px">서버가 바쁠 때는 최대 1분 정도 걸릴 수 있어요. 화면을 닫지 말고 기다려 주세요.</div></div>`;
 }
 function renderAlreadyDone(){
   app.innerHTML=`<div class="card done">
@@ -696,9 +696,12 @@ function loadSelfRef(code,done){
 /* 2차 팀장 링크(code=2H-...)로 들어오면 입사자 자가점검을 시트에서 직접 읽어 온다(예전처럼 입사자가 전달하는 링크가 필요 없음).
    입사자가 아직 제출 전이면 기다리는 화면, 불러오지 못하면 안내 화면(빈 자가점검으로 열리지 않게). */
 function loadSelfDirect(code,done){
-  let finished=false;
+  /* 서버 응답이 간헐적으로 10초 이상(최대 1분 넘게) 걸리는 경우가 있어, 한 번에 길게 기다리고 오류가 나면 한 번 더 시도한다.
+     먼저 도착한 정상 응답을 쓰고, 두 번 다 실패했을 때만 실패 화면으로 보낸다. */
+  let finished=false,attempt=0;
   const finish=()=>{ if(finished)return; finished=true; done(); };
-  window.__selfDirCb=(resp)=>{
+  const handle=(resp)=>{
+    if(finished)return;
     const d=resp&&resp.ok&&resp.data;
     if(!d){ state.selfStatus='fail'; }
     else if(d.status==='ready'){ try{ applySelfIn({p:{name:d.name||state.profile.target},s:d.s}); }catch(e){} state.selfStatus='ready'; }
@@ -706,36 +709,51 @@ function loadSelfDirect(code,done){
     else { state.selfStatus='wait'; }
     finish();
   };
-  const s=document.createElement('script');
-  s.src=SUBMIT_URL+'?action=getSelf&code='+encodeURIComponent(code)+'&callback=__selfDirCb&_='+Date.now();
-  s.onerror=()=>{ state.selfStatus='fail'; finish(); };
-  document.body.appendChild(s);
-  setTimeout(()=>{ if(!state.selfStatus) state.selfStatus='fail'; finish(); }, 20000);
+  const retryOrFail=()=>{ if(finished)return; if(attempt<2) send(); else { state.selfStatus='fail'; finish(); } };
+  const send=()=>{
+    attempt++;
+    const cb='__selfDirCb'+attempt;
+    window[cb]=handle;
+    const s=document.createElement('script');
+    s.src=SUBMIT_URL+'?action=getSelf&code='+encodeURIComponent(code)+'&callback='+cb+'&_='+Date.now();
+    s.onerror=()=>{ setTimeout(retryOrFail,1500); };
+    document.body.appendChild(s);
+    setTimeout(retryOrFail, attempt===1?35000:40000);
+  };
+  send();
 }
 /* 링크 잠금 여부 확인(HR이 시트 '_link_status' 상태 열을 closed로 바꾸면 접근 차단).
    code 파라미터가 없거나 SUBMIT_URL 미설정이면 검사 없이 통과(fail-open). */
-function checkLinkStatus(code, done){
-  let finished=false;
-  const finish=()=>{ if(finished)return; finished=true; done(); };
+const LINK={started:false,released:false,result:null,waiters:[]};
+function startLinkCheck(code){   /* 요청은 한 번만 보낸다. 팀장 2차 링크는 자가점검 조회와 동시에 미리 보내 대기 시간을 겹친다 */
+  if(LINK.started)return; LINK.started=true;
+  const release=()=>{ if(LINK.released)return; LINK.released=true; LINK.waiters.splice(0).forEach(f=>f()); };
   window.__linkStatusCb=(resp)=>{
     const closed=!!(resp && resp.ok && resp.status==='closed');
     const doneAlready=!!(resp && resp.ok && !closed && resp.done);
-    if(closed){ state.step='closed'; if(finished) render(); }   /* 늦게 도착한 닫힘 응답도 반영 */
-    else if(doneAlready){ state.step='alreadyDone'; if(finished) render(); }   /* 이미 제출이 끝난 단계: 내용은 보여 주지 않고 안내만 */
-    finish();
+    if(closed||doneAlready){
+      LINK.result=closed?'closed':'alreadyDone';   /* 이미 제출이 끝난 단계는 내용은 보여 주지 않고 안내만 */
+      state.step=LINK.result;
+      if(LINK.released) render();   /* 늦게 도착한 닫힘/완료 응답도 반영 */
+    }
+    release();
   };
   const s=document.createElement('script');
   s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&k='+encodeURIComponent(linkKey())+'&hire='+encodeURIComponent(state.profile.hire||'')+'&callback=__linkStatusCb&_='+Date.now();
-  s.onerror=finish;
+  s.onerror=release;
   document.body.appendChild(s);
-  setTimeout(finish, 10000); // 서버 응답이 보통 2~3초(느리면 10초 이상)라 넉넉히 기다린 뒤에도 안 오면 막지 않고 통과
+  setTimeout(release, 20000); // 서버 응답이 보통 2~3초(느리면 10초 이상)라 넉넉히 기다린 뒤에도 안 오면 막지 않고 통과
+}
+function checkLinkStatus(code, done){
+  startLinkCheck(code);
+  if(LINK.released) done(); else LINK.waiters.push(done);
 }
 function bootAfterSelfRef(){
   if(state.alreadyDone){ state.step='alreadyDone'; render(); return; }
   if(state.linkCode && SUBMIT_URL){
     const resolvedStep=state.step;
     state.step='checking'; render();
-    checkLinkStatus(state.linkCode, ()=>{ if(state.step!=='closed'&&state.step!=='alreadyDone') state.step=resolvedStep; render(); });
+    checkLinkStatus(state.linkCode, ()=>{ state.step=LINK.result||resolvedStep; render(); });
   }else{
     render();
   }
@@ -896,6 +914,7 @@ function mtAfterDone(){
 initParams();
 if(state.role==='hm' && state.round==='2' && /^2H-/.test(state.linkCode||'') && SUBMIT_URL && !state.scRefCode){
   state.step='checking'; render();
+  startLinkCheck(state.linkCode);   /* 링크 확인은 자가점검 조회와 동시에 보낸다(순서대로 보내면 두 번 기다림) */
   loadSelfDirect(state.linkCode, ()=>{
     finalizeEntry();
     if(state.selfStatus==='done') state.alreadyDone=true;

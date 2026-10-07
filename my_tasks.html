@@ -125,7 +125,7 @@ function msgView(h,p,retry){
 function render(){
   const app=document.getElementById('app');
   if(!ME){app.innerHTML=msgView('링크를 확인해 주세요','안내 메일의 본인 이름 링크로 접속해 주세요. 문의는 <b>'+HRDEST+'</b>으로 부탁드립니다.');return;}
-  if(S.loading&&!S.data){app.innerHTML=BRAND+'<div class="msg">불러오는 중...</div>';return;}
+  if(S.loading&&!S.data){app.innerHTML=BRAND+'<div class="msg">불러오는 중...<div style="margin-top:10px;font-size:12px;opacity:.8">서버가 바쁠 때는 최대 1분 정도 걸릴 수 있어요. 화면을 닫지 말고 기다려 주세요.</div></div>';return;}
   if(S.err==='not_found'){app.innerHTML=msgView('열 수 없는 링크입니다','종료되었거나 잘못된 링크입니다. 안내 메일의 링크를 다시 확인하시고, 계속 안 되면 <b>'+HRDEST+'</b>으로 문의해 주세요.');return;}
   if(!S.data){app.innerHTML=msgView('불러오지 못했습니다','잠시 후 다시 불러와 주세요. 계속 안 되면 <b>'+HRDEST+'</b>으로 문의해 주세요.',true);return;}
   const D=S.data,list=D.tasks,n=list.length,dn=list.filter(x=>x.st==='done').length;
@@ -140,13 +140,19 @@ function render(){
 
 /* ===== 서버에서 읽기(JSONP) ===== */
 function fetchTasks(cb){
-  let finished=false;const fin=(r)=>{if(finished)return;finished=true;cb(r);};
-  const name='__mt'+Date.now()+Math.floor(Math.random()*1000);
-  window[name]=r=>{fin(r);};
-  const s=document.createElement('script');
-  s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(ME)+'&callback='+name+'&_='+Date.now();
-  s.onerror=()=>fin(null);document.body.appendChild(s);
-  setTimeout(()=>fin(null),25000);   /* 서버가 2~3초, 느리면 10초 이상 걸릴 수 있어 넉넉히 기다림 */
+  /* 서버가 보통 2~4초, 간헐적으로 10초에서 1분 넘게 걸리기도 해서 길게 기다리고, 오류나 시간 초과면 한 번 더 시도한다(먼저 온 정상 응답을 사용) */
+  let finished=false,attempt=0;const fin=(r)=>{if(finished)return;finished=true;cb(r);};
+  const retryOrFail=()=>{if(finished)return;if(attempt<2)send();else fin(null);};
+  const send=()=>{
+    attempt++;
+    const name='__mt'+Date.now()+Math.floor(Math.random()*1000);
+    window[name]=r=>{fin(r);};
+    const s=document.createElement('script');
+    s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(ME)+'&callback='+name+'&_='+Date.now();
+    s.onerror=()=>{setTimeout(retryOrFail,1500);};document.body.appendChild(s);
+    setTimeout(retryOrFail,attempt===1?35000:40000);
+  };
+  send();
 }
 function load(show){
   if(!ME){render();return;}
