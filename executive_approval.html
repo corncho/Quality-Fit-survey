@@ -890,14 +890,27 @@ function mtToast(m){
   if(!t){t=document.createElement('div');t.id='mtoast';t.className='mtoast';document.body.appendChild(t);}
   t.textContent=m;t.classList.add('show');clearTimeout(mtToast._t);mtToast._t=setTimeout(()=>t.classList.remove('show'),3600);
 }
-function mtFetch(cb){
-  let finished=false;const fin=r=>{if(finished)return;finished=true;cb(r);};
-  const name='__mtd'+Date.now()+Math.floor(Math.random()*1000);
-  window[name]=r=>fin(r);
-  const s=document.createElement('script');
-  s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(MT.me)+'&callback='+name+'&_='+Date.now();
-  s.onerror=()=>fin(null);document.body.appendChild(s);
-  setTimeout(()=>fin(null),25000);
+function mtFetch(cb,me){
+  /* 서버가 간헐적으로 10초에서 1분 넘게 걸려서 길게 기다리고, 오류나 시간 초과면 한 번 더 시도한다(먼저 온 정상 응답을 사용) */
+  let finished=false,attempt=0;const fin=r=>{if(finished)return;finished=true;cb(r);};
+  const who=me||MT.me;
+  const retryOrFail=()=>{if(finished)return;if(attempt<2)send();else fin(null);};
+  const send=()=>{
+    attempt++;
+    const name='__mtd'+Date.now()+Math.floor(Math.random()*1000);
+    window[name]=r=>fin(r);
+    const s=document.createElement('script');
+    s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(who)+'&callback='+name+'&_='+Date.now();
+    s.onerror=()=>{setTimeout(retryOrFail,1500);};document.body.appendChild(s);
+    setTimeout(retryOrFail,attempt===1?35000:40000);
+  };
+  send();
+}
+/* 단계 목록을 미리 받아 둔다(페이지를 연 뒤 잠시 있다가 한 번). 제출 직후 서버가 느려도 남은 단계를 바로 보여 주기 위함이며, 제출 직후에 한 번 더 받아 바뀐 것만 반영한다 */
+const MTPRE={started:false,done:false,r:null,cbs:[]};
+function mtPrefetch(me){
+  if(!me||!SUBMIT_URL||MTPRE.started)return; MTPRE.started=true;
+  mtFetch(r=>{MTPRE.done=true;MTPRE.r=(r&&r.ok&&r.data)?r:null;MTPRE.cbs.splice(0).forEach(f=>f(MTPRE.r));},me);
 }
 function mtCard(t,num,primary){
   const no='<div class="no">'+num+'</div>',title=mtEsc((MT_TITLE[t.k]||(()=>t.k))(t));
@@ -988,18 +1001,30 @@ function mtNotifyBox(N){
 }
 
 /* 제출이 끝난 직후 호출: 남은 단계와 완료 메일을 #mtExtra에 채운다. 응답이 없으면 내가 할 일 링크만 안내한다. */
+/* 허브가 링크에 실어 준 다음 사람 정보(nxto, nxhub, nxd). 없으면 null */
+function mtNxFromUrl(){
+  try{const q=new URLSearchParams(location.search),to=q.get('nxto'),hub=q.get('nxhub'),d=q.get('nxd');return(to&&(hub||d))?{to:to,hub:hub||'',direct:d||''}:null;}catch(e){return null;}
+}
 function mtAfterDone(){
   const box=document.getElementById('mtExtra');
   if(!box||!MT.me)return;
   const hub=mtHubUrl();
-  box.innerHTML='<div class="box"><p class="lead" style="margin:0">다음 단계를 확인하고 있어요...</p></div>';
-  mtFetch(r=>{
-    if(!(r&&r.ok&&r.data)){box.innerHTML='<p class="foot">남은 단계는 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 확인할 수 있어요.</p>';return;}
+  let shown=false;
+  const NX=mtNxFromUrl(),earlyN=NX?mtNotifyOf({k:MT.k,who:MT.who,next:NX}):null;   /* 서버 응답 없이도 완료 메일 박스를 먼저 보여 준다 */
+  MT._notify=earlyN;
+  const early=()=>earlyN?mtNotifyBox(earlyN):'';
+  box.innerHTML=early()+'<div class="box"><p class="lead" style="margin:0">다음 단계를 확인하고 있어요... 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.</p><p class="foot" style="margin:8px 0 0">기다리지 않고 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 바로 확인하셔도 됩니다.</p></div>';
+  const fail=()=>{box.innerHTML=early()+'<div class="box"><p class="lead" style="margin:0 0 12px">다음 단계를 아직 불러오지 못했어요. 서버가 바쁜 것 같아요.</p><div class="mini-actions"><button class="btn ghost sm" onclick="mtAfterDone()">다시 불러오기</button><a class="btn primary sm link" href="'+mtEsc(hub)+'">내가 할 일에서 확인</a></div></div>';};
+  const prep=(r)=>{
     const tasks=r.data.tasks;
     let mine=null;
     tasks.forEach(t=>{if(t.k===MT.k&&(!MT.code||t.code===MT.code)){t.st='done';mine=t;}});   /* 방금 낸 단계는 서버 반영이 늦어도 완료로 표시 */
-    MT.tasks=tasks;
-    const N=mtNotifyOf(mine);MT._notify=N;
+    return {tasks:tasks,mine:mine,sig:tasks.map(t=>t.k+'|'+t.code+'|'+t.st).join(',')};
+  };
+  const show=(P)=>{
+    const tasks=P.tasks;
+    MT.tasks=tasks;MT._sig=P.sig;shown=true;
+    const N=mtNotifyOf(P.mine)||earlyN;MT._notify=N;
     const rest=tasks.filter(t=>t.st!=='done'),n=tasks.length,dn=n-rest.length;
     let h=N?mtNotifyBox(N):'';
     if(rest.length){
@@ -1010,7 +1035,15 @@ function mtAfterDone(){
       h+='<div class="box ok"><h3>모든 단계를 마쳤습니다</h3><p class="lead" style="margin-bottom:0">추가로 하실 일은 없습니다. 수고하셨습니다.</p></div>';
     }
     box.innerHTML=h;
+  };
+  /* 미리 받아 둔 목록이 있으면 바로 보여 주고, 최신 목록은 뒤에서 받아 달라진 때만 다시 그린다 */
+  const fresh=()=>mtFetch(r=>{
+    if(r&&r.ok&&r.data){const P=prep(r);if(!shown||P.sig!==MT._sig)show(P);}
+    else if(!shown)fail();
   });
+  if(MTPRE.done&&MTPRE.r){show(prep(MTPRE.r));fresh();}
+  else if(MTPRE.started&&!MTPRE.done){MTPRE.cbs.push(r=>{if(r)show(prep(r));fresh();});}
+  else fresh();
 }
 
 /* eref 코드로 서버(_pending_approval 시트)에서 팀장 데이터를 조회한다(JSONP). */
@@ -1067,6 +1100,7 @@ if(STAGE==='exec' && !HM_DATA && _linkCode && SUBMIT_URL){
 }else{
   bootAfterExecRef();
 }
+if(ME_TOKEN) setTimeout(()=>mtPrefetch(ME_TOKEN),20000);   /* 제출 직후 남은 단계를 바로 보여 주기 위해 미리 받아 둠 */
 </script>
 </body>
 </html>

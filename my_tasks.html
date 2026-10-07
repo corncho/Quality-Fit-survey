@@ -97,7 +97,7 @@ function card(t,num,primary){
   const fresh=!!S.fresh[t.k+'|'+t.code];
   return '<div class="t'+(fresh?' fresh':'')+'">'+no+'<div class="body"><div class="ti">'+title+'</div>'+
     '<div class="meta">'+(fresh?'<span class="chip new">방금 열렸어요</span>':'<span class="chip go">지금 할 수 있어요</span>')+chip+'</div></div>'+
-    '<div class="act">'+(t.url?'<a class="btn'+(hot?' red':primary?'':' ghost')+' sm" href="'+esc(t.url)+'">바로 작성하기</a>':'<button class="btn sm" disabled>링크 준비 중</button>')+'</div></div>';
+    '<div class="act">'+(t.url?'<a class="btn'+(hot?' red':primary?'':' ghost')+' sm" href="'+esc(withNext(t))+'">바로 작성하기</a>':'<button class="btn sm" disabled>링크 준비 중</button>')+'</div></div>';
 }
 function groupHTML(label,list,sub,first){
   if(!list.length)return '';
@@ -118,6 +118,12 @@ function alertBox(list){
   return '<div class="alert"><b>'+parts.join(', ')+'</b><br>마감일이 지나면 링크가 닫힙니다. 빨간색으로 표시된 단계를 먼저 진행해 주세요.</div>';
 }
 
+/* 다음 사람(팀장 평가 제출 후 담당임원, 입사자 2차 제출 후 팀장)에게 보낼 완료 메일 정보를 링크에 함께 실어 보낸다.
+   서버가 느리거나 응답하지 않아도 제출 직후 완료 메일 박스를 바로 보여 주기 위함이다(이미 이 화면이 서버에서 받은 값만 사용). */
+function withNext(t){
+  if(!t.url||!t.next)return t.url||'';
+  try{const n=t.next,e=encodeURIComponent;return t.url+(t.url.indexOf('?')<0?'?':'&')+'nxto='+e(n.to||'')+'&nxhub='+e(n.hub||'')+'&nxd='+e(n.direct||'');}catch(x){return t.url;}
+}
 /* ===== 화면 ===== */
 const BRAND='<div class="brand"><div class="mk">HR</div><div><b>경력사원 온보딩 진단</b><span>인재개발팀 &middot; Talent Development</span></div></div>';
 function msgView(h,p,retry){
