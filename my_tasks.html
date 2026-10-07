@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경력사원 온보딩 진단 내가 할 일</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  :root{--ink:#1a2230;--ink-soft:#4a556a;--line:#e3e7ee;--line-soft:#eef1f6;--bg:#f6f7fa;--card:#fff;--accent:#1f6feb;--accent-soft:#eaf1fe;--ok:#0f7a4d;--ok-soft:#e7f4ee;--warn:#b4530a;--warn-soft:#fdf4e7;--red:#c62828;--red-soft:#fdecec;--shadow:0 1px 2px rgba(20,30,50,.04),0 8px 24px rgba(20,30,50,.06)}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{font-family:'Pretendard',-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;letter-spacing:-.01em;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,p{text-wrap:balance;margin:0}
+  .wrap{max-width:860px;margin:0 auto;padding:22px 18px 80px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:26px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:18px;text-align:left}
+  .brand .mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#1f6feb,#0b3d91);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px}
+  .brand b{font-size:15px}.brand span{display:block;font-size:11.5px;color:var(--ink-soft)}
+  .alert{margin:0 0 14px;text-align:left;background:var(--red-soft);border:1.5px solid #f0a8a8;border-left-width:6px;border-radius:12px;padding:13px 16px;color:#7a1414;font-size:13.5px;line-height:1.6}
+  .alert b{color:var(--red);font-size:15px}
+  .pg{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+  .bar{flex:1;height:7px;background:#fff;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+  .t{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:9px;flex-wrap:wrap;text-align:left}
+  .t .no{flex:none;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .t.wait .no{background:#9aa5b8}.t.dn .no{background:var(--ok)}
+  .t.fresh{border:2px solid var(--ok);background:#f4fbf7}
+  .t .body{flex:1;min-width:220px}
+  .t .ti{font-size:15px;font-weight:800}
+  .t .meta{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.7}
+  .chip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:99px;padding:2px 10px;margin-right:6px}
+  .chip.go{background:var(--ok-soft);color:var(--ok)}.chip.wt{background:#eef0f4;color:#5b6678}.chip.dn{background:var(--ok-soft);color:var(--ok)}.chip.due{background:var(--warn-soft);color:var(--warn)}
+  .chip.hot{background:var(--red);color:#fff}.chip.new{background:var(--ok);color:#fff}
+  .btn{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:var(--accent);color:#fff;text-decoration:none;display:inline-block}
+  .btn:hover{background:#155fd4}.btn[disabled]{background:#cfd6e4;color:#fff;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+  .btn.red{background:var(--red)}.btn.red:hover{background:#a51f1f}
+  .btn.sm{padding:8px 12px;font-size:12.5px}
+  .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grp{margin-top:20px}.grp:first-of-type{margin-top:6px}
+  .grp h3{font-size:13px;font-weight:800;color:var(--ink-soft);letter-spacing:.02em}
+  .grp .gsub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .hubhead h1{font-size:21px;margin-bottom:4px}.hubhead p{color:var(--ink-soft);font-size:14px}
+  .msg{text-align:center;padding:40px 12px;color:var(--ink-soft)}
+  .msg h2{font-size:19px;color:var(--ink);margin-bottom:6px}
+  .foot{margin-top:18px;font-size:12.5px;color:var(--ink-soft)}
+  @media(max-width:640px){.card{padding:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="app"><div class="msg">불러오는 중...</div></div>
+</div>
+<script>
+/* 내가 할 일: 본인 링크(me=토큰)로 들어오면 서버(응답 시트)에서 이 사람의 단계와 상태를 읽어 보여 준다.
+   본인에게 배정된 단계만 보이며, 앞 단계가 끝나면 다음 단계가 자동으로 "지금 할 수 있어요"로 바뀐다(열어 두면 30초마다 확인). */
+const HRDEST='인재개발팀';
+const SUBMIT_URL='https://script.google.com/macros/s/AKfycbzlnIEmzzjXChTsjjyRvaFaC_YPVfH037HjVCDGcjwdFBojbtNpd34VJYBL0jKF0n9N/exec';
+const ME=(new URLSearchParams(location.search).get('me')||'').trim();
+const HEAD={'입사자':'님','팀장':' 팀장님','임원':' 담당님'};
+const WD=['일','월','화','수','목','금','토'];
+const esc=s=>(s==null?'':String(s)).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+let S={data:null,err:'',loading:true,prev:{},fresh:{}};
+
+const TITLE={
+  n1:t=>'1차 채용 Quality 진단',
+  h1:t=>'1차 채용 Quality 평가: '+t.who+'님',
+  n2:t=>'2차 온보딩 적응 진단(자가점검)',
+  h2:t=>'2차 자가점검 피드백 작성: '+t.who+'님',
+  cats:t=>'2차 평가 점수 입력과 임원 결재 요청: '+t.who+'님',
+  exec:t=>'온보딩 적응 만족도 결재: '+t.who+'님'
+};
+const WAITTXT={
+  h2:t=>t.who+'님이 자가점검을 제출하면 자동으로 열립니다',
+  exec:t=>'팀장님의 평가가 끝나면 열리고, 팀장님이 열렸다고 안내해 주십니다'
+};
+
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function dstr(iso){const d=new Date(iso+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()+' ('+WD[d.getDay()]+')';}
+function dleft(due){return Math.round((new Date(due+'T00:00:00')-new Date(todayISO()+'T00:00:00'))/86400000);}
+function hasDue(t){return /^\d{4}-\d{2}-\d{2}$/.test(t.due||'');}
+function urgent(t){return t.st!=='done'&&hasDue(t)&&dleft(t.due)<=3;}   /* 아직 열리지 않은 단계도 같은 기준으로 임박/당일 표시 */
+function dueTxt(t){
+  if(!hasDue(t))return '';
+  const d=dleft(t.due);
+  return d<0?dstr(t.due)+' 마감 지남':d===0?dstr(t.due)+' 오늘 마감':dstr(t.due)+' 마감 D-'+d;
+}
+
+/* ===== 단계 카드 ===== */
+/* 번호는 그 묶음 안의 순서일 뿐 전체 단계 순서를 뜻하지 않는다. 완료/대기 단계는 묶음 제목으로 따로 표시한다 */
+function card(t,num,primary){
+  const no='<div class="no">'+num+'</div>', title=esc((TITLE[t.k]||(()=>t.k))(t));
+  const hot=urgent(t), due=dueTxt(t), chip=due?'<span class="chip '+(hot?'hot':'due')+'">'+esc(due)+'</span>':'';
+  if(t.st==='done')return '<div class="t dn">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip dn">완료</span>제출한 내용은 다시 볼 수 없어요</div></div></div>';
+  if(t.st==='wait')return '<div class="t wait">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip wt">대기 중</span>'+chip+'<br>'+esc((WAITTXT[t.k]||(()=>''))(t))+'</div></div>'+
+    '<div class="act"><button class="btn sm" disabled>아직 열리지 않았어요</button></div></div>';
+  const fresh=!!S.fresh[t.k+'|'+t.code];
+  return '<div class="t'+(fresh?' fresh':'')+'">'+no+'<div class="body"><div class="ti">'+title+'</div>'+
+    '<div class="meta">'+(fresh?'<span class="chip new">방금 열렸어요</span>':'<span class="chip go">지금 할 수 있어요</span>')+chip+'</div></div>'+
+    '<div class="act">'+(t.url?'<a class="btn'+(hot?' red':primary?'':' ghost')+' sm" href="'+esc(t.url)+'">바로 작성하기</a>':'<button class="btn sm" disabled>링크 준비 중</button>')+'</div></div>';
+}
+function groupHTML(label,list,sub,first){
+  if(!list.length)return '';
+  return '<div class="grp"><h3>'+label+' ('+list.length+')</h3>'+(sub?'<p class="gsub">'+sub+'</p>':'')+
+    list.map((t,j)=>card(t,j+1,!!first&&j===0)).join('')+'</div>';
+}
+/* 지금 할 수 있는 단계는 마감 임박 순으로 앞에 놓고, 그 묶음의 첫 단계 버튼만 파랗게(임박하면 빨갛게) 강조 */
+function openGroups(list){
+  const todo=list.filter(t=>t.st==='todo').map((t,i)=>[t,i]).sort((a,b)=>(urgent(b[0])-urgent(a[0]))||(a[1]-b[1])).map(x=>x[0]);
+  return groupHTML('지금 할 수 있는 단계',todo,'',true)+
+    groupHTML('아직 열리지 않은 단계',list.filter(t=>t.st==='wait'),'앞 단계가 끝나면 자동으로 열려요. 이 페이지를 열어 두면 30초마다 자동으로 확인해요.',false);
+}
+function alertBox(list){
+  const open=list.filter(t=>t.st!=='done'&&hasDue(t));
+  const today=open.filter(t=>dleft(t.due)<=0).length, soon=open.filter(t=>dleft(t.due)>0&&dleft(t.due)<=3).length;
+  if(!today&&!soon)return '';
+  const parts=[];if(today)parts.push('오늘 마감 '+today+'건');if(soon)parts.push('마감 임박 '+soon+'건');
+  return '<div class="alert"><b>'+parts.join(', ')+'</b><br>마감일이 지나면 링크가 닫힙니다. 빨간색으로 표시된 단계를 먼저 진행해 주세요.</div>';
+}
+
+/* ===== 화면 ===== */
+const BRAND='<div class="brand"><div class="mk">HR</div><div><b>경력사원 온보딩 진단</b><span>인재개발팀 &middot; Talent Development</span></div></div>';
+function msgView(h,p,retry){
+  return BRAND+'<div class="msg"><h2>'+h+'</h2><p>'+p+'</p>'+(retry?'<div style="margin-top:16px"><button class="btn" onclick="load(true)">다시 불러오기</button></div>':'')+'</div>';
+}
+function render(){
+  const app=document.getElementById('app');
+  if(!ME){app.innerHTML=msgView('링크를 확인해 주세요','안내 메일의 본인 이름 링크로 접속해 주세요. 문의는 <b>'+HRDEST+'</b>으로 부탁드립니다.');return;}
+  if(S.loading&&!S.data){app.innerHTML=BRAND+'<div class="msg">불러오는 중...</div>';return;}
+  if(S.err==='not_found'){app.innerHTML=msgView('열 수 없는 링크입니다','종료되었거나 잘못된 링크입니다. 안내 메일의 링크를 다시 확인하시고, 계속 안 되면 <b>'+HRDEST+'</b>으로 문의해 주세요.');return;}
+  if(!S.data){app.innerHTML=msgView('불러오지 못했습니다','잠시 후 다시 불러와 주세요. 계속 안 되면 <b>'+HRDEST+'</b>으로 문의해 주세요.',true);return;}
+  const D=S.data,list=D.tasks,n=list.length,dn=list.filter(x=>x.st==='done').length;
+  const done=list.filter(x=>x.st==='done');
+  app.innerHTML=BRAND+
+    '<div class="hubhead"><h1>'+esc(D.name)+(HEAD[D.role]||'님')+', 내가 할 일</h1><p>이 페이지에서 내가 해야 할 단계를 모두 보고, 바로 이어서 작성할 수 있어요.</p></div>'+
+    '<div class="pg" style="margin-top:16px"><span>전체 '+n+'단계 중 '+dn+'단계 완료</span><div class="bar"><i style="width:'+Math.round(dn/n*100)+'%"></i></div></div>'+
+    alertBox(list)+
+    (dn===n?'<div class="alert" style="background:var(--ok-soft);border-color:#bfe3d0;color:#1d5c40"><b style="color:var(--ok)">모든 단계를 마쳤습니다</b><br>추가로 하실 일은 없습니다. 수고하셨습니다.</div>':'')+
+    openGroups(list)+groupHTML('완료한 단계',done,'완료한 단계는 제출한 내용을 다시 볼 수 없어요.',false);
+}
+
+/* ===== 서버에서 읽기(JSONP) ===== */
+function fetchTasks(cb){
+  let finished=false;const fin=(r)=>{if(finished)return;finished=true;cb(r);};
+  const name='__mt'+Date.now()+Math.floor(Math.random()*1000);
+  window[name]=r=>{fin(r);};
+  const s=document.createElement('script');
+  s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(ME)+'&callback='+name+'&_='+Date.now();
+  s.onerror=()=>fin(null);document.body.appendChild(s);
+  setTimeout(()=>fin(null),25000);   /* 서버가 2~3초, 느리면 10초 이상 걸릴 수 있어 넉넉히 기다림 */
+}
+function load(show){
+  if(!ME){render();return;}
+  if(show){S.loading=true;render();}
+  fetchTasks(r=>{
+    S.loading=false;
+    if(r&&r.ok&&r.data){
+      const prev=S.prev;
+      r.data.tasks.forEach(t=>{const key=t.k+'|'+t.code;if(prev[key]==='wait'&&t.st==='todo')S.fresh[key]=true;prev[key]=t.st;});
+      S.data=r.data;S.err='';
+    }else if(r&&r.error==='not_found'){S.data=null;S.err='not_found';}
+    else if(!S.data){S.err='net';}
+    render();
+  });
+}
+load(true);
+/* 아직 열리지 않은 단계가 있으면 30초마다 조용히 확인하고, 다른 화면에서 돌아오면 바로 한 번 확인한다 */
+setInterval(()=>{if(S.data&&S.data.tasks.some(t=>t.st==='wait')&&!document.hidden)load(false);},30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.data)load(false);});
+</script>
+</body>
+</html>

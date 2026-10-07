@@ -14,7 +14,9 @@
     --shadow:0 1px 2px rgba(20,30,50,.04),0 8px 24px rgba(20,30,50,.06);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+  body{margin:0;font-family:'Pretendard',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+  /* 멘트는 단어 중간에서 끊기지 않게(keep-all), 여러 줄이면 줄 길이를 고르게 */
+  .mood,.note,h1,h2,.lead,.item-desc{text-wrap:balance}
   .wrap{max-width:940px;margin:0 auto;padding:26px 20px 90px}
   .topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px}
   .brand{display:flex;align-items:center;gap:10px}
@@ -66,6 +68,10 @@
   .crit tr.hl td{background:var(--accent-soft)}
   .crit td.clmatch{font-weight:600}
   .crit tr.hl td.clmatch{font-weight:800;color:var(--accent2)}
+  /* 입사자 직급에 해당하는 열은 머리글부터 맨 아래 칸까지 통째로 음영 */
+  .crit th.clcol{background:#ffe3a3;color:#6b4300}
+  .crit td.clcol{background:#fff3cf}
+  .crit tr.hl td.clcol{background:#ffe08a;color:#1a2230}
   .crit .clbadge{font-size:10.5px;color:var(--ink-soft);padding:6px 9px;background:#fbfcfe;border-top:1px solid var(--line-soft)}
 
   .total-box{display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:linear-gradient(135deg,#0b3d91,#1f6feb);color:#fff;border-radius:12px;padding:22px 24px;margin-top:20px}
@@ -82,9 +88,70 @@
   .btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:#0a336f}
   .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line)}.btn.ghost:hover{border-color:#b9c6e6}
   .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  .prog{height:6px;background:var(--line-soft);border-radius:99px;overflow:hidden}
+  .prog i{display:block;height:100%;background:var(--accent2);width:0;transition:width .3s ease}
+  .step-meta{font-size:13px;color:var(--ink-soft);margin-bottom:7px;display:flex;justify-content:space-between;font-weight:600}
+  .err-banner{background:#fdecec;color:#a11;border:1px solid #f6c9c9;border-radius:10px;padding:11px 14px;font-size:13px;margin-top:14px;display:none;line-height:1.6}
+  .err-banner.show{display:block}
+  .missing{border-color:#d33!important;box-shadow:0 0 0 3px rgba(221,51,51,.12)!important}
+  /* 임원 결재 화면: 팀장이 준 평가 항목 요약 */
+  .sum-band{font-size:12.5px;font-weight:800;color:#fff;background:var(--accent);border-radius:8px 8px 0 0;padding:8px 14px;margin-top:16px;display:flex;justify-content:space-between}
+  .sum-band .w{opacity:.85;font-weight:600}
+  .sum-item{border:1px solid var(--line);border-top:none;padding:16px 16px 12px}
+  .sum-top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .sum-name{font-size:18px;font-weight:800;line-height:1.35}
+  .sum-no{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:800;margin-right:10px;vertical-align:1px}
+  .sum-name .bp{font-size:13px;color:var(--ink-soft);font-weight:600;margin-left:8px}
+  .sum-score{display:flex;gap:10px;flex-wrap:wrap}
+  .sum-chip{border-radius:10px;padding:7px 16px;background:var(--accent-soft);text-align:center;min-width:104px}
+  .sum-chip small{display:block;font-size:12px;color:var(--ink-soft);font-weight:700}
+  .sum-chip b{display:block;font-size:24px;font-weight:800;color:var(--accent2);line-height:1.2}
+  .sum-chip em{display:block;font-size:12px;font-style:normal;color:var(--ink-soft);font-weight:600}
+  .sum-chip.earn{background:#e9f6ef}.sum-chip.earn b{color:var(--ok)}
+  .sum-desc{font-size:13.5px;color:var(--ink-soft);margin-top:8px;line-height:1.55}
   .note{font-size:11.5px;color:var(--ink-soft);background:var(--line-soft);border-radius:9px;padding:11px 14px;margin-top:14px;line-height:1.5}
   .sign-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
   .hidden{display:none!important}
+
+  /* 내가 할 일 연동(제출 직후 남은 단계, 다음 사람에게 보내는 완료 메일). 본문 스타일과 겹치지 않게 .mt 안에서만 적용 */
+  .mt{--red:#c62828;--red-soft:#fdecec;--warn-soft:#fdf4e7}
+  .mt p{max-width:none}
+  .mt .box{margin-top:20px;text-align:left;border:1.5px solid var(--accent2);border-left-width:6px;background:var(--accent-soft);border-radius:12px;padding:18px 18px 16px}
+  .mt .box.ok{border-color:#bfe3d0;background:var(--ok-soft)}
+  .mt .box h3{font-size:16.5px;font-weight:800;color:var(--accent);margin:0 0 4px}
+  .mt .box.ok h3{color:var(--ok)}
+  .mt .box .lead{font-size:13.5px;color:var(--ink-soft);margin:0 0 12px;line-height:1.6}
+  .mt .alert{margin:0 0 14px;text-align:left;background:var(--red-soft);border:1.5px solid #f0a8a8;border-left-width:6px;border-radius:12px;padding:13px 16px;color:#7a1414;font-size:13.5px;line-height:1.6}
+  .mt .alert b{color:var(--red);font-size:15px}
+  .mt .pg{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+  .mt .bar{flex:1;height:7px;background:#fff;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .mt .bar i{display:block;height:100%;background:var(--accent2);border-radius:99px}
+  .mt .t{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:9px;flex-wrap:wrap;text-align:left}
+  .mt .t .no{flex:none;width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .mt .t.wait .no{background:#9aa5b8}.mt .t.dn .no{background:var(--ok)}
+  .mt .t .body{flex:1;min-width:220px}
+  .mt .t .ti{font-size:15px;font-weight:800}
+  .mt .t .meta{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.7}
+  .mt .chip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:99px;padding:2px 10px;margin-right:6px}
+  .mt .chip.go{background:var(--ok-soft);color:var(--ok)}.mt .chip.wt{background:#eef0f4;color:#5b6678}.mt .chip.dn{background:var(--ok-soft);color:var(--ok)}.mt .chip.due{background:var(--warn-soft);color:var(--warn)}.mt .chip.hot{background:var(--red);color:#fff}
+  .mt .btn.sm{padding:8px 12px;font-size:12.5px}
+  .mt .btn.red{background:var(--red);color:#fff}.mt .btn.red:hover{background:#a51f1f}
+  .mt .btn[disabled]{background:#cfd6e4;color:#fff;cursor:not-allowed}
+  .mt .btn.link{text-decoration:none}
+  .mt .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mt .grp{margin-top:20px}.mt .grp:first-of-type{margin-top:6px}
+  .mt .grp h3{font-size:13px;font-weight:800;color:var(--ink-soft);margin:0}
+  .mt .grp .gsub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .mt .sub2{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px 14px}
+  .mt .sub2>b{font-size:13.5px}
+  .mt .pv{margin-top:10px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .mt .pvsub{background:#f3f5f9;border-bottom:1px solid var(--line);padding:10px 16px;font-size:12.5px;color:var(--ink-soft);line-height:1.6}
+  .mt .pvsub b{color:var(--ink)}
+  .mt .pvbody{padding:16px;overflow-x:auto}
+  .mt .foot{margin-top:14px;font-size:13px;color:var(--ink-soft)}
+  .mt .foot a{color:var(--accent2);font-weight:700}
+  .mtoast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1a2230;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;z-index:9}
+  .mtoast.show{opacity:1}
 
   @media print{
     body{background:#fff}.wrap{max-width:100%;padding:0}
@@ -108,7 +175,6 @@
     <span id="stageDesc" class="muted" style="font-size:13px"></span>
     <button id="gotoExecBtn" class="btn ghost" style="margin-left:auto;padding:8px 13px;font-size:12.5px;display:none" onclick="document.getElementById('execCard').scrollIntoView({behavior:'smooth',block:'start'})">결재란으로 이동</button>
     <button id="retryBtn" class="btn ghost" style="margin-left:auto;padding:8px 13px;font-size:12.5px;display:none" onclick="location.reload()">다시 불러오기</button>
-    <button id="execEntryBtn" class="btn ghost" style="margin-left:auto;padding:8px 13px;font-size:12.5px" onclick="enterExecByCode()">임원 결재 코드로 이어받기</button>
   </div>
 
   <div class="card" id="moodCard" style="display:none"><div class="mood" id="moodBox"></div></div>
@@ -116,7 +182,7 @@
   <!-- 1. 인적사항 -->
   <div class="card">
     <div class="sec-t"><span class="n">1</span>인적사항</div>
-    <div class="people" id="blkP"><div class="who">입사자<span class="lk-tag" id="tagP"></span></div>
+    <div class="people" id="blkP"><div class="who">입사자</div>
       <label class="fld" style="margin-top:0"><span class="lb">소속</span>
         <select id="p_dept_sel" onchange="onDeptSelChange('p')"></select>
         <input type="text" id="p_dept_other" placeholder="소속(팀) 직접 입력" style="margin-top:6px" class="hidden">
@@ -154,7 +220,6 @@
     <p class="lead" id="hmLead">각 항목의 수준을 선택하면 배점 대비 취득 점수가 자동 계산됩니다. 항목별 <b>기준 보기</b>로 직급별 판단 기준을 확인할 수 있습니다.</p>
     <div id="evalArea"></div>
 
-    <div class="note" id="hmProgress" style="display:none">0 / 7 항목 작성 완료</div>
     <div id="scoreReveal" style="display:none">
       <div class="total-box">
         <div><div class="lbl">총점</div><div class="big"><span id="totalScore">0</span><small>/100</small></div></div>
@@ -173,11 +238,17 @@
   <div class="card" id="execCard">
     <div class="sec-t"><span class="n">3</span>담당임원 평가</div>
     <label class="fld"><span class="lb">점수 (0~100 기입)</span>
-      <input type="number" id="ex_score" min="0" max="100" oninput="onExecScore()" placeholder="예) 92">
+      <input type="number" id="ex_score" min="0" max="100" step="10" oninput="onExecScore()" placeholder="예) 90 (화살표는 10점 단위)">
       <div class="hint" id="exGradeTxt" style="font-size:12px;color:var(--ink-soft);margin-top:5px;min-height:18px"></div></label>
     <input type="hidden" id="ex_grade">
     <label class="fld" style="margin-top:12px"><span class="lb">담당임원 평가 의견</span>
       <textarea id="ex_comment" style="min-height:80px"></textarea></label>
+  </div>
+
+  <div class="card" id="progCard" style="padding:18px 22px">
+    <div class="step-meta"><span id="progLabel">작성 진행률</span><span id="pctTxt">0%</span></div>
+    <div class="prog"><i id="progBar"></i></div>
+    <div class="err-banner" id="errBanner"></div>
   </div>
 
   <div class="actions">
@@ -195,17 +266,22 @@ const _params=new URLSearchParams(location.search);
 let STAGE = _params.get('stage')==='exec' ? 'exec' : 'hm';
 let HM_DATA = null;
 let EXEC_LOAD_FAILED = false;
+let ALREADY_DONE = false;   /* 이미 결재가 끝난 링크: 서버가 내용을 돌려주지 않는다 */
 /* 팀장 데이터를 통째로 담은 d= 링크는 메신저/메일이 길면 잘라먹어 "코드 붙여넣기" 화면으로
    떨어지는 문제가 있었다. 서버(_pending_approval)에 원래부터 있던 code(예: 2E-김지연-0601)로
    저장해두고 링크에는 그 code만 실어 전달한다(d=는 하위호환으로 계속 지원). 이 code를 그대로
    '임원결재' 시트의 행 식별자로도 재사용해서, 팀장 완료 시점과 임원 완료 시점을 같은 행에
    단계적으로 기록할 수 있게 한다. */
 const _linkCode = _params.get('code');
+/* 내가 할 일 연동: 링크의 me= 토큰(개인별). 있으면 제출 직후 남은 단계와 다음 사람에게 보내는 완료 메일을 보여 준다 */
+const ME_TOKEN = (_params.get('me')||'').trim();
+function execKey(){ return STAGE==='exec' ? 'exec' : 'cats'; }
+/* HR 링크에 담당임원(ex, exdept)이 있으면 팀장 단계에서 함께 보관했다가 임원 결재 화면에 미리 채운다(수정 가능) */
+const EXEC_PRE = {성명:(_params.get('ex')||'').trim(), 소속:(_params.get('exdept')||'').trim()};
 (function(){
   const d=_params.get('d');
   if(STAGE==='exec' && d){ try{ HM_DATA=decData(d); }catch(e){ STAGE='hm'; } }
 })();
-function encData(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function decData(str){ str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4)str+='='; return JSON.parse(decodeURIComponent(escape(atob(str)))); }
 /* ===== 평가 항목 배점 (첨부3) ===== */
 const CATS=[
@@ -222,7 +298,7 @@ const CATS=[
   ]},
 ];
 const SCALE=[{v:5,l:'기대 이상'},{v:4,l:'기대 부합'},{v:3,l:'부분 부합'},{v:2,l:'기대 미흡'},{v:1,l:'부적합'}];
-const CLCOLS=[['CL1','CL1'],['CL23','CL2·3'],['CL4','CL4'],['CL4p','CL4(p)']];
+const CLCOLS=[['CL1','CL1'],['CL23','CL2/3'],['CL4','CL4'],['CL4p','CL4(p)']];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
@@ -327,7 +403,7 @@ function buildEval(){
   CATS.forEach(cat=>{
     html+=`<div class="cat-band">${esc(cat.name)}<span class="w">배점 ${cat.weight}점</span></div>`;
     cat.items.forEach(it=>{
-      html+=`<div class="item">
+      html+=`<div class="item" id="item_${it.key}">
         <div class="item-head">
           <div><div class="item-name">${esc(it.t)}<span class="bp">(배점 ${it.bp})</span></div>
             <div class="item-desc">${esc(it.d)}</div></div>
@@ -347,10 +423,10 @@ function critTable(key){
   const g=clGroup();
   let rows='';
   [5,4,3,2,1].forEach(sv=>{
-    const cells=CLCOLS.map(([code])=>`<td${g===code?' class="clmatch"':''}>${esc(CRIT[key][sv][code])}</td>`).join('');
+    const cells=CLCOLS.map(([code])=>`<td${g===code?' class="clmatch clcol"':''}>${esc(CRIT[key][sv][code])}</td>`).join('');
     rows+=`<tr class="${scores[key]===sv?'hl':''}" data-s="${sv}"><td class="s">${sv}점</td>${cells}</tr>`;
   });
-  const head=CLCOLS.map(([code,lbl])=>`<th${g===code?' style="color:var(--accent2)"':''}>${lbl}</th>`).join('');
+  const head=CLCOLS.map(([code,lbl])=>`<th${g===code?' class="clcol"':''}>${lbl}</th>`).join('');
   return `<table><thead><tr><th>점수</th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <div class="clbadge">${g?'현재 입사자 직급('+document.getElementById('p_cl').value+') 기준 열이 강조됩니다.':(document.getElementById('p_cl').value==='계약직'?'계약직은 직급(CL) 구분 없이 전체 기준을 참고해 주세요.':'직급(CL)을 선택하면 해당 열이 강조됩니다.')}</div>`;
 }
@@ -375,11 +451,47 @@ function recalc(){
   document.getElementById('subJob').textContent=job;
   document.getElementById('subOrg').textContent=org;
   document.getElementById('totalScore').textContent=total;
-  const doneCount=CATS.flatMap(c=>c.items).filter(it=>scores[it.key]).length;
-  const totalCount=CATS.flatMap(c=>c.items).length;
-  const prog=document.getElementById('hmProgress');
-  if(prog) prog.textContent=`${doneCount} / ${totalCount} 항목 작성 완료`;
+  updateProgress();
 }
+/* ===== 필수 항목 점검 + 진행 바 ===== */
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function requiredItems(){
+  const v=id=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+  const L=[];
+  if(STAGE==='hm'){
+    L.push(['입사자 소속',getDept('p'),'p_dept_sel'],['입사자 성명',v('p_name'),'p_name'],['입사자 입사일',v('p_hire'),'p_hire'],['입사자 직급(CL)',v('p_cl'),'p_cl']);
+    CATS.flatMap(c=>c.items).forEach((it,i)=>L.push([(i+1)+'. '+it.t+' 점수 선택',scores[it.key]||'','item_'+it.key]));
+    L.push(['팀장 소속',getDept('hm'),'hm_dept_sel'],['팀장 성명',v('hm_name'),'hm_name'],['팀장 평가일',v('hm_date'),'hm_date'],['팀장 서명',v('hm_sign'),'hm_sign'],['팀장 평가 의견',v('hm_comment'),'hm_comment']);
+  }else{
+    L.push(['담당임원 소속',v('ex_dept'),'ex_dept'],['담당임원 성명',v('ex_name'),'ex_name'],['담당임원 평가일',v('ex_date'),'ex_date'],['담당임원 서명',v('ex_sign'),'ex_sign'],['담당임원 점수',v('ex_score'),'ex_score'],['담당임원 평가 의견',v('ex_comment'),'ex_comment']);
+  }
+  return L;
+}
+function updateProgress(){
+  const L=requiredItems(), done=L.filter(x=>x[1]!=='').length, pct=L.length?Math.round(done/L.length*100):0;
+  const bar=document.getElementById('progBar'), txt=document.getElementById('pctTxt'), lb=document.getElementById('progLabel');
+  if(bar) bar.style.width=pct+'%';
+  if(txt) txt.textContent=pct+'%';
+  if(lb) lb.textContent=(STAGE==='hm'?'1단계 팀장 평가 ':'2단계 담당임원 결재 ')+'작성 진행률 ('+done+' / '+L.length+')';
+}
+function clearMissing(){
+  document.querySelectorAll('.missing').forEach(e=>e.classList.remove('missing'));
+  const b=document.getElementById('errBanner'); if(b) b.classList.remove('show');
+}
+/* 비어 있는 항목이 있으면 목록을 보여 주고 첫 항목으로 이동한 뒤 true를 돌려준다(그 경우 다음 단계로 못 넘어감) */
+function blockIfMissing(){
+  const miss=requiredItems().filter(x=>x[1]==='');
+  clearMissing();
+  if(!miss.length) return false;
+  miss.forEach(m=>{ const el=document.getElementById(m[2]); if(el) el.classList.add('missing'); });
+  const b=document.getElementById('errBanner');
+  b.innerHTML='<b>아직 작성하지 않은 항목이 '+miss.length+'개 있습니다.</b> 모두 작성하면 다음 단계로 넘어갈 수 있습니다.<br>'+miss.map(m=>esc(m[0])).join(', ');
+  b.classList.add('show');
+  const first=document.getElementById(miss[0][2]); if(first) first.scrollIntoView({behavior:'smooth',block:'center'});
+  return true;
+}
+document.addEventListener('input',()=>{ clearMissing(); updateProgress(); });
+document.addEventListener('change',()=>{ clearMissing(); updateProgress(); });
 function onCLChange(){
   CATS.flatMap(c=>c.items).forEach(it=>{
     const box=document.getElementById('crit_'+it.key);
@@ -433,7 +545,7 @@ function collect(){
     _type:'approval', 제출시각:new Date().toLocaleString('ko-KR'),
     입사자:{소속:getDept('p'),성명:g('p_name'),입사일:g('p_hire'),직급:g('p_cl')},
     팀장:{소속:getDept('hm'),성명:g('hm_name'),평가일:g('hm_date'),서명:g('hm_sign'),의견:g('hm_comment')},
-    담당임원:execFields(),
+    담당임원:execFields(), 담당임원예정:{소속:EXEC_PRE.소속,성명:EXEC_PRE.성명},
     팀장평가:items, 직무역량점수:job, 조직적응점수:org, 총점:total, 등급:grade(total)
   };
 }
@@ -480,16 +592,18 @@ function linkClosedNow(){
     if(!_linkCode||!SUBMIT_URL){ resolve(false); return; }
     let done=false; const fin=v=>{ if(done)return; done=true; resolve(v); };
     const cb='__linkNow'+Date.now();
-    window[cb]=(resp)=>fin(!!(resp&&resp.ok&&resp.status==='closed'));
+    window[cb]=(resp)=>fin(!resp||!resp.ok?false:(resp.status==='closed'?'closed':(resp.done?'done':false)));
     const hire=(HM_DATA&&HM_DATA.입사자&&HM_DATA.입사자.입사일)||document.getElementById('p_hire').value||_params.get('hire')||'';
     const s=document.createElement('script');
-    s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(_linkCode)+'&hire='+encodeURIComponent(hire)+'&callback='+cb+'&_='+Date.now();
-    s.onerror=()=>fin(false); document.body.appendChild(s); setTimeout(()=>fin(false),2500);
+    s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(_linkCode)+'&k='+execKey()+'&hire='+encodeURIComponent(hire)+'&callback='+cb+'&_='+Date.now();
+    s.onerror=()=>fin(false); document.body.appendChild(s); setTimeout(()=>fin(false),9000);
   });
 }
 async function submitToSheet(){
+  if(blockIfMissing()) return;
   const btn=document.getElementById('submitBtn'); btn.disabled=true; const orig=btn.textContent; btn.textContent='제출 중...';
-  if(await linkClosedNow()){ renderClosedExec(); return; }
+  const lc=await linkClosedNow();
+  if(lc){ lc==='done' ? renderAlreadyDone() : renderClosedExec(); return; }
   const d=collect();
   if(!SUBMIT_URL){
     btn.disabled=false; btn.textContent=orig;
@@ -498,9 +612,7 @@ async function submitToSheet(){
   try{
     const rec=toFlatRecord(d);
     await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'exec_final',_code:_linkCode,record:rec})});
-    btn.textContent='결재 완료 ✓';
-    document.getElementById('linkOut').style.display='block';
-    document.getElementById('linkOut').innerHTML='<div class="note" style="background:var(--ok-soft);color:var(--ok);border:1px solid #bfe3d0"><b>결재가 접수되었습니다.</b> 인재개발팀 시트에 자동으로 반영되었습니다.</div>';
+    renderExecDone();
   }catch(e){
     btn.disabled=false; btn.textContent=orig;
     alert('전송이 차단된 것 같습니다. 결재 데이터(JSON)로 저장해 회신해 주세요.'); saveJSON();
@@ -508,88 +620,116 @@ async function submitToSheet(){
 }
 
 /* ===== 링크 인계 (서버 조회 없이 URL 자체에 데이터를 담아 전달) ===== */
-function hmRequiredOk(){
-  const g=id=>document.getElementById(id).value.trim();
-  const allScored=CATS.flatMap(c=>c.items).every(it=>scores[it.key]);
-  return allScored && g('p_name') && g('p_cl') && g('hm_name') && g('hm_sign');
+function renderExecDone(){
+  document.querySelector('.wrap').innerHTML = `<div class="topbar"><div class="brand"><div class="mk">HR</div>
+      <div><b>온보딩 적응 만족도 · 담당임원 결재</b><span>인재개발팀 · Talent Development</span></div></div></div>
+    <div class="card" style="text-align:center;padding:52px 20px">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:30px">&#10003;</div>
+      <h2 style="margin:0 0 8px;font-size:22px">결재가 접수되었습니다.</h2>
+      <p style="color:var(--ink-soft);margin:0;font-size:15px">${ME_TOKEN?'인재개발팀으로 접수되었습니다. 별도로 회신하실 필요 없습니다.':'추가로 하실 일은 없습니다.'}</p>
+      ${ME_TOKEN?'<div id="mtExtra" class="mt"></div>':''}
+    </div>`;
+  window.scrollTo(0,0);
+  if(ME_TOKEN){ MT.me=ME_TOKEN; MT.k='exec'; MT.code=_linkCode||''; MT.who=(HM_DATA&&HM_DATA.입사자&&HM_DATA.입사자.성명)||''; mtAfterDone(); }
 }
 /* 팀장 완료 시점을 '임원결재' 시트에도 즉시 기록해서(상태:팀장완료(임원대기)) HR이
    "팀장은 했는데 임원이 아직 안 한" 케이스를 구분할 수 있게 한다. 임원이 최종 제출하면
    같은 code로 같은 행이 갱신된다(upsertByCode_, 아래 submitToSheet 참고). */
 async function sendExecHandoff(payload){
-  if(!SUBMIT_URL || !_linkCode) return;
+  if(!SUBMIT_URL || !_linkCode) return false;
   try{
     await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({_kind:'exec_stage1',_code:_linkCode,teamLead:payload,record:toFlatRecord(payload)})});
-  }catch(e){}
+    return true;
+  }catch(e){ return false; }
 }
 async function makeExecLink(){
   const btn=document.getElementById('makeLinkBtn');
   if(btn.disabled) return;
-  if(!hmRequiredOk()){ alert('임원에게 넘기기 전에 7개 항목 점수와 입사자·팀장 정보(성명/직급/서명)를 모두 채워 주세요.'); return; }
+  if(blockIfMissing()) return;   /* 비어 있는 항목이 있으면 임원 링크를 만들 수 없다 */
   const origLabel=btn.textContent;
   btn.disabled=true; btn.classList.add('loading'); btn.textContent='링크 만드는 중...';
-  if(await linkClosedNow()){ btn.classList.remove('loading'); renderClosedExec(); return; }
+  const lc2=await linkClosedNow();
+  if(lc2){ btn.classList.remove('loading'); lc2==='done' ? renderAlreadyDone() : renderClosedExec(); return; }
   try{ await buildExecLink(); }
-  finally{ btn.disabled=false; btn.classList.remove('loading'); btn.textContent=origLabel; }
+  finally{
+    btn.classList.remove('loading');
+    if(btn.dataset.done){ btn.disabled=true; btn.textContent='평가 제출 완료'; }   /* 내가 할 일 연동: 한 번 제출하면 같은 화면에서 다시 보내지 않음 */
+    else { btn.disabled=false; btn.textContent=origLabel; }
+  }
 }
 async function buildExecLink(){
   const payload=collect();
-  await sendExecHandoff(payload);
+  const sentOk=await sendExecHandoff(payload);
+  if(ME_TOKEN){
+    /* 내가 할 일 연동: 링크를 만들어 전달하는 대신 담당임원의 내가 할 일에 결재 단계가 열리고, 완료 메일을 보내도록 안내한다 */
+    if(!sentOk){ alert('전송이 되지 않았습니다. 네트워크를 확인하고 다시 눌러 주세요.'); return; }
+    const out0=document.getElementById('linkOut');
+    out0.style.display='block'; out0.innerHTML='<div id="mtExtra" class="mt"></div>';
+    document.getElementById('makeLinkBtn').dataset.done='1';
+    MT.me=ME_TOKEN; MT.k='cats'; MT.code=_linkCode||''; MT.who=document.getElementById('p_name').value.trim();
+    mtAfterDone();
+    out0.scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
+  }
   const base=location.origin+location.pathname;
   const link=base+'?stage=exec&code='+encodeURIComponent(_linkCode||'');
-  const code='HMAPPR1:'+encData(payload); /* 오프라인 대비 완전 수동 코드는 기존 방식 유지 */
   const out=document.getElementById('linkOut');
   out.style.display='block';
   out.innerHTML=`<div class="note" style="line-height:1.6">
     <b>임원에게 전달할 결재 링크가 생성되었습니다.</b> 아래 링크를 담당임원에게 보내면, 임원은 팀장 평가를 확인하고 본인 결재만 하면 됩니다.
     <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       <input id="linkField" readonly value="${link.replace(/"/g,'&quot;')}" style="flex:1;min-width:240px;font-size:12px">
-      <button class="btn ghost sm" style="padding:8px 13px" onclick="copyText(document.getElementById('linkField').value,this)">링크 복사</button>
-      <button class="btn ghost sm" style="padding:8px 13px" onclick="copyText('${code}',this)">코드 복사</button>
+      <button class="btn ghost sm" style="padding:8px 13px" onclick="copyLinkText(document.getElementById('linkField').value,document.getElementById('linkField'),this)">링크 복사</button>
     </div>
-    <div class="muted" style="margin-top:8px;font-size:11.5px">링크가 메신저에서 잘리면, 코드를 복사해 임원이 이 툴 상단의 "임원 결재 코드로 이어받기"에 붙여넣도록 안내하세요.</div>
   </div>
-  <div class="note" style="margin-top:10px;background:var(--accent-soft);color:var(--ink);border:1.5px solid var(--accent);border-left-width:6px;padding:16px 18px;font-size:15px;line-height:1.6"><div style="color:var(--accent);font-size:16.5px;font-weight:800;margin-bottom:6px">다음 단계</div>위 링크(또는 코드)를 담당임원님께 직접 전달해 주세요. 임원님이 결재를 완료하면 별도로 하실 일은 없습니다.</div>`;
+  <div class="note" style="margin-top:10px;background:var(--accent-soft);color:var(--ink);border:1.5px solid var(--accent);border-left-width:6px;padding:16px 18px;font-size:15px;line-height:1.6"><div style="color:var(--accent);font-size:16.5px;font-weight:800;margin-bottom:6px">다음 단계</div>위 링크를 담당임원님께 직접 전달해 주세요. 임원님이 결재를 완료하면 별도로 하실 일은 없습니다.</div>`;
   out.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-function copyText(t,btn){
-  const done=()=>{const o=btn.textContent;btn.textContent='복사됨 ✓';setTimeout(()=>btn.textContent=o,1500);};
-  if(navigator.clipboard){navigator.clipboard.writeText(t).then(done).catch(()=>prompt('복사하세요',t));}
-  else prompt('복사하세요',t);
-}
-function enterExecByCode(){
-  const raw=prompt('임원 결재 코드(HMAPPR1: 로 시작)를 붙여넣으세요');
-  if(!raw)return;
-  const s=raw.trim().replace(/^HMAPPR1:/,'');
-  try{ HM_DATA=decData(s); STAGE='exec'; applyStage(); window.scrollTo(0,0); }
-  catch(e){ alert('코드를 인식하지 못했습니다. 다시 확인해 주세요.'); }
+/* 링크 복사: 클립보드 API가 막힌 환경에서는 예전 방식으로 한 번 더 시도하고, 그래도 안 되면 링크를 선택해 둔 채 안내한다(조용히 실패하지 않음) */
+function copyLinkText(text,inputEl,btn){
+  const flash=msg=>{ if(!btn)return; const o=btn.dataset.o||btn.textContent; btn.dataset.o=o; btn.textContent=msg; setTimeout(()=>{btn.textContent=o;},1800); };
+  const legacy=()=>{
+    try{
+      const ta=document.createElement('textarea'); ta.value=text; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0,text.length);
+      const r=document.execCommand('copy'); document.body.removeChild(ta);
+      if(r){ flash('복사됨 \u2713'); return; }
+    }catch(e){}
+    if(inputEl){ inputEl.focus(); inputEl.select(); }
+    flash('Ctrl+C로 복사하세요');
+  };
+  if(navigator.clipboard&&window.isSecureContext){ navigator.clipboard.writeText(text).then(()=>flash('복사됨 \u2713')).catch(legacy); } else legacy();
 }
 
 /* ===== 단계별 화면 구성 ===== */
 function hmSummaryHTML(d){
-  const meta={}; CATS.flatMap(c=>c.items).forEach(it=>meta[it.t]=it);
-  const rows=Object.entries(d.팀장평가||{}).map(([k,v])=>{
-    const it=meta[k];
-    const descRow = it ? `<tr><td colspan="3" style="padding:0 10px 12px">
-        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:6px">${esc(it.d)}</div>
+  let n=0, html='';
+  const esc2=t=>(t||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  CATS.forEach(cat=>{
+    html+=`<div class="sum-band">${esc(cat.name)}<span class="w">배점 ${cat.weight}점</span></div>`;
+    cat.items.forEach(it=>{
+      n++;
+      const v=(d.팀장평가||{})[it.t]||{};
+      const sel=Number(v.선택)||0;
+      scores[it.key]=sel||undefined;      /* 기준 보기에서 팀장이 선택한 점수 줄이 팀장 화면과 같은 방식으로 강조되도록 */
+      const lab=(SCALE.find(x=>x.v===sel)||{}).l||'';
+      html+=`<div class="sum-item">
+        <div class="sum-top">
+          <div class="sum-name"><span class="sum-no">${n}</span>${esc(it.t)}<span class="bp">배점 ${it.bp}</span></div>
+          <div class="sum-score">
+            <div class="sum-chip"><small>선택</small><b>${sel?sel+'점':'-'}</b><em>${esc(lab)}</em></div>
+            <div class="sum-chip earn"><small>취득 / 배점</small><b>${v.취득!==undefined&&v.취득!==''?v.취득:'-'} / ${v.배점??it.bp}</b></div>
+          </div>
+        </div>
+        <div class="sum-desc">${esc(it.d)}</div>
         <button class="crit-toggle" onclick="toggleCrit('${it.key}')">기준 보기 &#9662;</button>
         <div class="crit" id="crit_${it.key}">${critTable(it.key)}</div>
-      </td></tr>` : '';
-    return `<tr>
-       <td style="padding:9px 10px 4px;border-top:1px solid var(--line-soft);font-weight:600">${esc(k)}</td>
-       <td style="padding:9px 10px 4px;border-top:1px solid var(--line-soft);text-align:center">${v.선택||'-'}점</td>
-       <td style="padding:9px 10px 4px;border-top:1px solid var(--line-soft);text-align:right;font-weight:700">${v.취득!==''?v.취득:'-'} / ${v.배점}</td>
-     </tr>${descRow}`;
-  }).join('');
-  return `<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:var(--line-soft)">
-        <th style="text-align:left;padding:8px 10px;font-size:11.5px">평가 항목</th>
-        <th style="padding:8px 10px;font-size:11.5px">선택</th>
-        <th style="text-align:right;padding:8px 10px;font-size:11.5px">취득 / 배점</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-    ${d.팀장?.의견?`<div style="margin-top:12px"><div class="lb" style="font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:4px">팀장 평가 의견</div><div style="font-size:13.5px;white-space:pre-wrap;background:var(--line-soft);border-radius:9px;padding:11px 13px">${(d.팀장.의견||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div></div>`:''}`;
+      </div>`;
+    });
+  });
+  html+=d.팀장?.의견?`<div style="margin-top:16px"><div class="lb" style="font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:5px">팀장 평가 의견</div><div style="font-size:14px;white-space:pre-wrap;background:var(--line-soft);border-radius:9px;padding:12px 14px;line-height:1.6">${esc2(d.팀장.의견)}</div></div>`:'';
+  return html;
 }
 /* 인적사항 잠금 규칙: 지금 작성하는 사람의 칸만 활성화하고, 다른 사람의 칸은 잠근다.
    - 팀장 단계: 입사자 칸은 링크로 받은 값이 있으면 잠금(없으면 입력 가능), 팀장 칸은 활성(링크 값은 미리 채움),
@@ -607,10 +747,11 @@ function applyStage(){
   g('retryBtn').style.display='none';
   if(STAGE==='hm'){
     pill.textContent='1단계 · 팀장 평가 작성';
-    desc.textContent='평가를 마친 뒤 "임원 결재 링크 만들기"를 누르면 담당임원에게 보낼 링크가 생성됩니다.';
+    desc.textContent = ME_TOKEN ? '평가를 마친 뒤 "평가 완료, 임원 결재 요청"을 누르면 담당임원의 내가 할 일에 결재 단계가 열립니다.' : '평가를 마친 뒤 "임원 결재 링크 만들기"를 누르면 담당임원에게 보낼 링크가 생성됩니다.';
+    if(ME_TOKEN && !g('makeLinkBtn').dataset.done) g('makeLinkBtn').textContent='평가 완료, 임원 결재 요청';
     g('execCard').style.display='none';
     g('makeLinkBtn').style.display=''; g('submitBtn').style.display='none';
-    g('execEntryBtn').style.display=''; g('gotoExecBtn').style.display='none';
+    g('gotoExecBtn').style.display='none';
     /* 입사자: 링크로 받은 값은 잠금, 없는 값만 입력 가능 */
     const tgt=_params.get('target'), hire=_params.get('hire'), dept=_params.get('dept'), cl=_params.get('cl');
     setField('p_name',tgt,!!tgt);
@@ -624,23 +765,29 @@ function applyStage(){
     /* 담당임원: 이 단계에서는 전부 잠금 */
     ['ex_dept','ex_name','ex_date','ex_sign'].forEach(id=>{const el=g(id); if(el){el.value=''; el.disabled=true; el.placeholder='담당임원이 결재할 때 작성합니다';}});
     g('blkP').classList.toggle('locked',true); g('blkEX').classList.add('locked'); g('blkHM').classList.remove('locked');
-    setLockTag('tagP','(링크로 전달된 정보, 수정 불가)'); setLockTag('tagHM','(작성 중)'); setLockTag('tagEX','(담당임원 결재 단계에서 작성)');
-    g('hmProgress').style.display=''; g('scoreReveal').style.display='none';
-    showMood();
+    setLockTag('tagHM','(작성 중)'); setLockTag('tagEX','(담당임원 결재 단계에서 작성)');
+    g('scoreReveal').style.display='none';
+    if(!g('hm_date').value) g('hm_date').value=todayStr();   /* 평가일은 오늘로 미리 채움(수정 가능) */
+    showMood(); updateProgress();
   }else{
     pill.textContent='2단계 · 담당임원 결재';
     desc.textContent='팀장 평가 결과를 확인하고 맨 아래 "3. 담당임원 평가"에서 점수와 의견을 작성한 뒤 서명하고 제출하세요.';
-    g('execCard').style.display='';          /* 코드로 이어받기 등 어떤 경로로 들어와도 결재란이 보이도록 */
-    g('execEntryBtn').style.display='none'; g('gotoExecBtn').style.display='';
-    g('hmProgress').style.display='none'; g('scoreReveal').style.display='';
+    g('execCard').style.display='';          /* 어떤 경로로 들어와도 결재란이 보이도록 */
+    g('gotoExecBtn').style.display='';
+    g('scoreReveal').style.display='';
     const d=HM_DATA||{};
     setDept('p',d.입사자?.소속,true);setField('p_name',d.입사자?.성명,true);setField('p_hire',d.입사자?.입사일,true);
     setField('p_cl',d.입사자?.직급,true);
     setDept('hm',d.팀장?.소속,true);setField('hm_name',d.팀장?.성명,true);setField('hm_date',d.팀장?.평가일,true);setField('hm_sign',d.팀장?.서명,true);
-    ['ex_dept','ex_name','ex_date','ex_sign','ex_score','ex_comment'].forEach(id=>{const el=g(id);if(el){el.disabled=false;el.placeholder=(id==='ex_score'?'예) 92':'');}});
+    ['ex_dept','ex_name','ex_date','ex_sign','ex_score','ex_comment'].forEach(id=>{const el=g(id);if(el){el.disabled=false;el.placeholder=(id==='ex_score'?'예) 90 (화살표는 10점 단위)':'');}});
+    /* 담당임원 소속/성명은 HR 링크의 정보로 미리 채움(수정 가능), 평가일은 오늘, 서명만 직접 입력 */
+    const pre=d.담당임원예정||{};
+    if(!g('ex_dept').value) g('ex_dept').value=pre.소속||'';
+    if(!g('ex_name').value) g('ex_name').value=pre.성명||'';
+    if(!g('ex_date').value) g('ex_date').value=todayStr();
     const exComment=g('ex_comment'); if(exComment) exComment.placeholder=`이 평가는 ${d.입사자?.성명||'입사자'}님의 성장을 돕는 소중한 자료로 쓰입니다. 솔직하고 애정 어린 의견을 부탁드립니다.`;
     g('blkP').classList.add('locked'); g('blkHM').classList.add('locked'); g('blkEX').classList.remove('locked');
-    setLockTag('tagP','(팀장이 입력한 정보, 수정 불가)'); setLockTag('tagHM','(팀장이 입력한 정보, 수정 불가)'); setLockTag('tagEX','(작성 중)');
+    setLockTag('tagHM','(팀장이 입력한 정보, 수정 불가)'); setLockTag('tagEX','(작성 중)');
     g('hmLead').textContent='팀장이 작성한 평가 결과입니다. 아래 담당임원 결재란에 결재해 주세요.';
     g('evalArea').innerHTML=hmSummaryHTML(d);
     g('subJob').textContent=d.직무역량점수??0;
@@ -648,22 +795,21 @@ function applyStage(){
     g('totalScore').textContent=d.총점??0;
     const hc=document.getElementById('hm_comment'); if(hc&&hc.closest('label'))hc.closest('label').style.display='none';
     g('makeLinkBtn').style.display='none'; g('submitBtn').style.display='';
-    showMood();
+    showMood(); updateProgress();
   }
 }
 /* 임원 링크로 들어왔는데 팀장 평가 내용을 불러오지 못한 경우: 팀장 작성 화면으로 조용히 넘어가지 않고 안내한다. */
 function showExecLoadFailed(){
   document.body.classList.add('exec-wait');
   document.getElementById('stagePill').textContent='팀장 평가 내용을 불러오지 못했습니다';
-  document.getElementById('stageDesc').textContent='잠시 후 "다시 불러오기"를 눌러 주세요. 계속 안 되면 팀장에게 받은 코드로 이어받거나 인재개발팀에 문의해 주세요.';
+  document.getElementById('stageDesc').textContent='잠시 후 "다시 불러오기"를 눌러 주세요. 계속 안 되면 인재개발팀에 문의해 주세요.';
   document.getElementById('retryBtn').style.display=''; document.getElementById('gotoExecBtn').style.display='none';
-  document.getElementById('execEntryBtn').style.display='';
 }
 
 function startApp(){
   buildDeptSelects();
   if(STAGE==='exec' && !HM_DATA && EXEC_LOAD_FAILED){ showExecLoadFailed(); return; }
-  buildEval();   /* 팀장 단계 화면 구성(코드로 이어받기 시에도 필요한 요소이므로 항상 만든다) */
+  buildEval();   /* 팀장 단계 화면 구성(임원 단계에서도 요약 표시에 필요한 요소라 항상 만든다) */
   applyStage();
 }
 function renderClosedExec(){
@@ -677,19 +823,178 @@ function renderClosedExec(){
 /* 링크 잠금 여부 확인(HR이 시트 '_link_status' 상태 열을 closed로 바꾸면 접근 차단). */
 function checkLinkStatusExec(code, cb){
   let finished=false; const finish=(v)=>{ if(finished)return; finished=true; cb(v); };
-  window.__linkStatusCb2=(resp)=>{ finish(!!(resp && resp.ok && resp.status==='closed')); };
+  window.__linkStatusCb2=(resp)=>{
+    const closed=!!(resp && resp.ok && resp.status==='closed');
+    const st=closed?'closed':((resp && resp.ok && resp.done)?'done':false);
+    if(finished && st){ st==='done' ? renderAlreadyDone() : renderClosedExec(); return; }   /* 늦게 도착한 닫힘/완료 응답도 반영 */
+    finish(st);
+  };
   const s=document.createElement('script');
   const hire=(HM_DATA&&HM_DATA.입사자&&HM_DATA.입사자.입사일)||_params.get('hire')||'';
-  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&hire='+encodeURIComponent(hire)+'&callback=__linkStatusCb2&_='+Date.now();
+  s.src=SUBMIT_URL+'?action=checkLink&code='+encodeURIComponent(code)+'&k='+execKey()+'&hire='+encodeURIComponent(hire)+'&callback=__linkStatusCb2&_='+Date.now();
   s.onerror=()=>finish(false);
   document.body.appendChild(s);
-  setTimeout(()=>finish(false), 2500);
+  setTimeout(()=>finish(false), 10000);   /* 서버 응답이 보통 2~3초라 넉넉히 기다림(예전 2.5초는 너무 짧아 닫힌 링크가 열렸음) */
 }
+/* ===== 내가 할 일 연동(링크에 me= 토큰이 있을 때만 동작). onboarding_survey.html, executive_approval.html 두 화면에 같은 코드를 둔다 =====
+   - 제출 직후 화면에 "남은 단계"와 바로가기를 보여 준다(서버가 응답 시트로 계산).
+   - 제출이 다음 사람의 단계를 여는 경우(입사자 2차 -> 팀장, 팀장 평가 -> 임원), 그 사람에게 보낼 완료 메일(.eml)을 만들어 준다. */
+const MT={me:ME_TOKEN,k:'',code:'',who:'',tasks:null,sent:false};
+const MT_TITLE={
+  n1:t=>'1차 채용 Quality 진단',
+  h1:t=>'1차 채용 Quality 평가: '+t.who+'님',
+  n2:t=>'2차 온보딩 적응 진단(자가점검)',
+  h2:t=>'2차 자가점검 피드백 작성: '+t.who+'님',
+  cats:t=>'2차 평가 점수 입력과 임원 결재 요청: '+t.who+'님',
+  exec:t=>'온보딩 적응 만족도 결재: '+t.who+'님'
+};
+const MT_WAIT={
+  h2:t=>t.who+'님이 자가점검을 제출하면 자동으로 열립니다',
+  exec:t=>'팀장님의 평가가 끝나면 열리고, 팀장님이 열렸다고 안내해 주십니다'
+};
+const mtWD=['일','월','화','수','목','금','토'];
+function mtEsc(s){return (s==null?'':String(s)).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
+function mtToday(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function mtDstr(iso){const d=new Date(iso+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()+' ('+mtWD[d.getDay()]+')';}
+function mtDleft(due){return Math.round((new Date(due+'T00:00:00')-new Date(mtToday()+'T00:00:00'))/86400000);}
+function mtHasDue(t){return /^\d{4}-\d{2}-\d{2}$/.test(t.due||'');}
+function mtUrgent(t){return t.st!=='done'&&mtHasDue(t)&&mtDleft(t.due)<=3;}
+function mtDueTxt(t){if(!mtHasDue(t))return '';const d=mtDleft(t.due);return d<0?mtDstr(t.due)+' 마감 지남':d===0?mtDstr(t.due)+' 오늘 마감':mtDstr(t.due)+' 마감 D-'+d;}
+function mtHubUrl(){return location.origin+location.pathname.replace(/[^\/]*$/,'')+'my_tasks.html?me='+encodeURIComponent(MT.me);}
+function mtToast(m){
+  let t=document.getElementById('mtoast');
+  if(!t){t=document.createElement('div');t.id='mtoast';t.className='mtoast';document.body.appendChild(t);}
+  t.textContent=m;t.classList.add('show');clearTimeout(mtToast._t);mtToast._t=setTimeout(()=>t.classList.remove('show'),3600);
+}
+function mtFetch(cb){
+  let finished=false;const fin=r=>{if(finished)return;finished=true;cb(r);};
+  const name='__mtd'+Date.now()+Math.floor(Math.random()*1000);
+  window[name]=r=>fin(r);
+  const s=document.createElement('script');
+  s.src=SUBMIT_URL+'?action=myTasks&me='+encodeURIComponent(MT.me)+'&callback='+name+'&_='+Date.now();
+  s.onerror=()=>fin(null);document.body.appendChild(s);
+  setTimeout(()=>fin(null),25000);
+}
+function mtCard(t,num,primary){
+  const no='<div class="no">'+num+'</div>',title=mtEsc((MT_TITLE[t.k]||(()=>t.k))(t));
+  const hot=mtUrgent(t),due=mtDueTxt(t),chip=due?'<span class="chip '+(hot?'hot':'due')+'">'+mtEsc(due)+'</span>':'';
+  if(t.st==='done')return '<div class="t dn">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip dn">완료</span>제출한 내용은 다시 볼 수 없어요</div></div></div>';
+  if(t.st==='wait')return '<div class="t wait">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip wt">대기 중</span>'+chip+'<br>'+mtEsc((MT_WAIT[t.k]||(()=>''))(t))+'</div></div><div class="act"><button class="btn primary sm" disabled>아직 열리지 않았어요</button></div></div>';
+  return '<div class="t">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip go">지금 할 수 있어요</span>'+chip+'</div></div>'+
+    '<div class="act">'+(t.url?'<a class="btn link sm '+(hot?'red':primary?'primary':'ghost')+'" href="'+mtEsc(t.url)+'">바로 작성하기</a>':'<button class="btn primary sm" disabled>링크 준비 중</button>')+'</div></div>';
+}
+function mtGroup(label,list,sub,first){
+  if(!list.length)return '';
+  return '<div class="grp"><h3>'+label+' ('+list.length+')</h3>'+(sub?'<p class="gsub">'+sub+'</p>':'')+list.map((t,j)=>mtCard(t,j+1,!!first&&j===0)).join('')+'</div>';
+}
+function mtGroups(list){
+  const todo=list.filter(t=>t.st==='todo').map((t,i)=>[t,i]).sort((a,b)=>(mtUrgent(b[0])-mtUrgent(a[0]))||(a[1]-b[1])).map(x=>x[0]);
+  return mtGroup('지금 할 수 있는 단계',todo,'',true)+mtGroup('아직 열리지 않은 단계',list.filter(t=>t.st==='wait'),'앞 단계가 끝나면 자동으로 열려요. 내가 할 일 페이지를 열어 두면 30초마다 자동으로 확인해요.',false);
+}
+function mtAlert(list){
+  const open=list.filter(t=>t.st!=='done'&&mtHasDue(t));
+  const today=open.filter(t=>mtDleft(t.due)<=0).length,soon=open.filter(t=>mtDleft(t.due)>0&&mtDleft(t.due)<=3).length;
+  if(!today&&!soon)return '';
+  const parts=[];if(today)parts.push('오늘 마감 '+today+'건');if(soon)parts.push('마감 임박 '+soon+'건');
+  return '<div class="alert"><b>'+parts.join(', ')+'</b><br>마감일이 지나면 링크가 닫힙니다. 빨간색으로 표시된 단계를 먼저 진행해 주세요.</div>';
+}
+
+/* ----- 다음 사람에게 보내는 완료 메일: 서식 있는 한 통(.eml)을 내려받아 열면 PC의 Outlook 작성창이 열린다 ----- */
+const MT_FALLBACK='위 페이지에서 열리지 않는다면 아래 링크로 접속하세요.';
+function mtOpenLine(N){return N.to+', 온보딩 점검 진단 평가 완료하여 전달 드립니다. 아래 링크 접속하시면 '+N.act+' 진행하실 수 있습니다.';}
+function mtNotifyOf(task){
+  if(!task||!task.next)return null;
+  const who=task.who||MT.who,n=task.next;
+  if(task.k==='n2')return {to:n.to,act:'피드백 작성을',what:who+'님의 2차 자가점검이 제출되어 피드백 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 자가점검 완료, 내가 해야 할 일에 피드백 단계가 열렸습니다!'};
+  if(task.k==='cats')return {to:n.to,act:'결재를',what:who+'님의 팀장 평가가 완료되어 결재 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 팀장 평가 완료, 내가 해야 할 일에 결재 단계가 열렸습니다!'};
+  return null;
+}
+/* 미리보기와 실제 메일이 같은 서식이 되도록 한 함수로 만든다. Outlook(Word 엔진)에서도 깨지지 않게 표와 인라인 스타일만 쓴다 */
+function mtMailHTML(N){
+  const F='font-family:\'맑은 고딕\',Malgun Gothic,sans-serif;',E=mtEsc;
+  return '<div style="'+F+'font-size:10.5pt;line-height:1.7;color:#1a2230">'+
+    '<p style="'+F+'margin:0 0 16px;font-size:11pt;color:#1a2230">'+E(mtOpenLine(N))+'</p>'+
+    '<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="'+F+'border-collapse:collapse;width:640px;max-width:100%;border:1px solid #e3e7ee;background:#ffffff">'+
+    '<tr><td style="'+F+'padding:22px 26px 0"><table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'+
+      '<td width="30" height="30" align="center" bgcolor="#1F6FEB" style="'+F+'background:#1F6FEB;color:#ffffff;font-weight:bold;font-size:9.5pt;width:30px;height:30px">HR</td>'+
+      '<td style="padding-left:10px;'+F+'"><div style="'+F+'font-size:11pt;font-weight:bold;color:#1a2230;line-height:1.3">경력사원 온보딩 진단</div><div style="'+F+'font-size:8.5pt;color:#4a556a;line-height:1.3">인재개발팀 &middot; Talent Development</div></td>'+
+    '</tr></table></td></tr>'+
+    '<tr><td style="'+F+'padding:20px 26px 4px"><div style="'+F+'font-size:17pt;font-weight:bold;color:#1a2230;line-height:1.4">'+E(N.to)+', 내가 해야 할 일에 링크가 열렸습니다!</div></td></tr>'+
+    '<tr><td style="'+F+'padding:10px 26px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'+
+      '<td width="6" bgcolor="#1F6FEB" style="'+F+'background:#1F6FEB;width:6px;font-size:1px">&nbsp;</td>'+
+      '<td bgcolor="#EAF1FE" style="'+F+'background:#EAF1FE;padding:16px 18px">'+
+        '<div style="'+F+'font-size:10.5pt;color:#4a556a;margin:0 0 12px">'+E(N.what)+'</div>'+
+        '<table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td bgcolor="#1F6FEB" style="'+F+'background:#1F6FEB;padding:10px 22px"><a href="'+E(N.hub)+'" style="'+F+'color:#ffffff;font-weight:bold;text-decoration:none;font-size:10.5pt">내가 할 일 열기</a></td></tr></table>'+
+      '</td></tr></table></td></tr>'+
+    '<tr><td style="'+F+'padding:16px 26px 22px;font-size:9.5pt;color:#4a556a">&#8251; '+E(MT_FALLBACK)+' <a href="'+E(N.direct)+'" style="color:#1F6FEB;font-weight:bold;text-decoration:underline">바로가기</a></td></tr>'+
+    '</table></div>';
+}
+function mtMailPlain(N){return mtOpenLine(N)+'\n\n'+N.to+', 내가 해야 할 일에 링크가 열렸습니다!\n'+N.what+'\n\n내가 할 일 열기: '+N.hub+'\n\n※ '+MT_FALLBACK+'\n바로가기: '+N.direct;}
+function mtB64(s){const bytes=new TextEncoder().encode(s);let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin);}
+function mtMakeEml(N){
+  const wrap=s=>s.replace(/(.{76})/g,'$1\r\n');
+  return 'X-Unsent: 1\r\nSubject: =?UTF-8?B?'+mtB64(N.subj)+'?=\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrap(mtB64(mtMailHTML(N)))+'\r\n';
+}
+function mtNotify(){return MT._notify||null;}
+function mtDownloadEml(){
+  const N=mtNotify();if(!N)return;
+  const blob=new Blob([mtMakeEml(N)],{type:'message/rfc822'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='온보딩점검_완료안내.eml';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  mtToast('내려받은 "온보딩점검_완료안내" 파일을 열면 Outlook 메일 작성창이 열립니다. 받는 사람만 선택해 보내세요.');
+}
+function mtCopyPlain(text,msg){
+  const ok=()=>mtToast(msg);
+  const legacy=()=>{try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(ta);ta.focus();ta.select();const r=document.execCommand('copy');document.body.removeChild(ta);if(r){ok();return;}}catch(e){}mtToast('자동 복사가 막혀 있어요. 미리보기 내용을 직접 선택해 복사해 주세요.');};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(ok).catch(legacy);}else legacy();
+}
+function mtCopyRich(){
+  const N=mtNotify();if(!N)return;
+  const html=mtMailHTML(N),plain=mtMailPlain(N);
+  if(navigator.clipboard&&window.ClipboardItem&&window.isSecureContext){
+    navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([plain],{type:'text/plain'})})]).then(()=>mtToast('서식 그대로 복사했습니다. 새 메일 본문에 붙여넣으세요.')).catch(()=>mtCopyPlain(plain,'메일 내용을 복사했습니다. 새 메일 본문에 붙여넣으세요.'));
+  }else mtCopyPlain(plain,'메일 내용을 복사했습니다. 새 메일 본문에 붙여넣으세요.');
+}
+function mtNotifyBox(N){
+  return '<div class="box"><h3>'+mtEsc(N.to)+'께 완료 메일을 보내 주세요</h3>'+
+    '<p class="lead">'+mtEsc(N.to)+'의 <b>내가 할 일</b> 페이지에 다음 단계가 <b>자동으로 열렸습니다.</b> 메일 한 통에 열렸다는 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</p>'+
+    '<div class="act"><button class="btn primary" onclick="mtDownloadEml()">완료 메일 작성</button><button class="btn ghost" onclick="mtCopyRich()">메일 내용 복사</button></div>'+
+    '<p style="font-size:12px;color:var(--ink-soft);margin-top:8px">"완료 메일 작성"은 내려받은 파일을 한 번 열면 Outlook 작성창이 열립니다(Chrome은 다운로드 표시줄, Edge는 다운로드 창에서 파일 열기). 받는 사람은 작성창에서 선택하세요.</p>'+
+    '<div class="sub2"><b>보내지는 메일 미리보기</b><div class="pv"><div class="pvsub"><b>제목</b> '+mtEsc(N.subj)+'</div><div class="pvbody">'+mtMailHTML(N)+'</div></div></div></div>';
+}
+
+/* 제출이 끝난 직후 호출: 남은 단계와 완료 메일을 #mtExtra에 채운다. 응답이 없으면 내가 할 일 링크만 안내한다. */
+function mtAfterDone(){
+  const box=document.getElementById('mtExtra');
+  if(!box||!MT.me)return;
+  const hub=mtHubUrl();
+  box.innerHTML='<div class="box"><p class="lead" style="margin:0">다음 단계를 확인하고 있어요...</p></div>';
+  mtFetch(r=>{
+    if(!(r&&r.ok&&r.data)){box.innerHTML='<p class="foot">남은 단계는 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 확인할 수 있어요.</p>';return;}
+    const tasks=r.data.tasks;
+    let mine=null;
+    tasks.forEach(t=>{if(t.k===MT.k&&(!MT.code||t.code===MT.code)){t.st='done';mine=t;}});   /* 방금 낸 단계는 서버 반영이 늦어도 완료로 표시 */
+    MT.tasks=tasks;
+    const N=mtNotifyOf(mine);MT._notify=N;
+    const rest=tasks.filter(t=>t.st!=='done'),n=tasks.length,dn=n-rest.length;
+    let h=N?mtNotifyBox(N):'';
+    if(rest.length){
+      h+='<div class="box"><h3>남은 단계가 '+rest.length+'개 있어요</h3><p class="lead">아래 버튼으로 바로 이어서 진행할 수 있어요.</p>'+mtAlert(rest)+
+        '<div class="pg"><span>전체 '+n+'단계 중 '+dn+'단계 완료</span><div class="bar"><i style="width:'+Math.round(dn/n*100)+'%"></i></div></div>'+
+        mtGroups(rest)+'<p class="foot">전체 현황은 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 언제든 확인할 수 있어요.</p></div>';
+    }else{
+      h+='<div class="box ok"><h3>모든 단계를 마쳤습니다</h3><p class="lead" style="margin-bottom:0">추가로 하실 일은 없습니다. 수고하셨습니다.</p></div>';
+    }
+    box.innerHTML=h;
+  });
+}
+
 /* eref 코드로 서버(_pending_approval 시트)에서 팀장 데이터를 조회한다(JSONP). */
 function loadExecRef(code,done){
   let finished=false; const finish=()=>{ if(finished)return; finished=true; done(); };
   window.__execRefCb=(resp)=>{
-    if(resp && resp.ok && resp.data && resp.data.teamLead){ HM_DATA=resp.data.teamLead; }
+    if(resp && resp.ok && resp.data && resp.data.status==='done'){ ALREADY_DONE=true; }
+    else if(resp && resp.ok && resp.data && resp.data.teamLead){ HM_DATA=resp.data.teamLead; }
     else{ EXEC_LOAD_FAILED=true; } /* 조회 실패: 1단계(팀장 작성) 화면으로 넘기지 않고 안내 */
     finish();
   };
@@ -697,11 +1002,21 @@ function loadExecRef(code,done){
   s.src=SUBMIT_URL+'?action=getPending&code='+encodeURIComponent(code)+'&callback=__execRefCb&_='+Date.now();
   s.onerror=()=>{ EXEC_LOAD_FAILED=true; finish(); };
   document.body.appendChild(s);
-  setTimeout(()=>{ if(!HM_DATA) EXEC_LOAD_FAILED=true; finish(); }, 8000);
+  setTimeout(()=>{ if(!HM_DATA) EXEC_LOAD_FAILED=true; finish(); }, 10000);
+}
+function renderAlreadyDone(){
+  document.querySelector('.wrap').innerHTML = `<div class="topbar"><div class="brand"><div class="mk">HR</div>
+      <div><b>온보딩 적응 만족도 · 담당임원 결재</b><span>인재개발팀 · Talent Development</span></div></div></div>
+    <div class="card" style="text-align:center;padding:50px 20px">
+      <h2 style="margin:0 0 8px">${STAGE==='exec'?'이미 결재가 완료된 링크입니다':'이미 제출이 완료된 링크입니다'}</h2>
+      <p style="color:var(--ink-soft);margin:0">제출한 내용은 개인정보 보호를 위해 다시 볼 수 없습니다. 수정이 필요하면 인재개발팀으로 문의해 주세요.</p>
+      ${ME_TOKEN?'<div style="margin-top:16px"><a class="btn primary" style="text-decoration:none" href="'+mtEsc(mtHubUrl())+'">내가 할 일로 돌아가기</a></div>':''}
+    </div>`;
 }
 function bootAfterExecRef(){
+  if(ALREADY_DONE){ renderAlreadyDone(); return; }
   if(_linkCode && SUBMIT_URL){
-    checkLinkStatusExec(_linkCode, closed=>{ closed ? renderClosedExec() : startApp(); });
+    checkLinkStatusExec(_linkCode, st=>{ st==='done' ? renderAlreadyDone() : st ? renderClosedExec() : startApp(); });
   }else{
     startApp();
   }
