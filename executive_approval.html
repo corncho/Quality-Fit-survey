@@ -140,6 +140,10 @@
   .mt .btn[disabled]{background:#cfd6e4;color:#fff;cursor:not-allowed}
   .mt .btn.link{text-decoration:none}
   .mt .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .mt .mtone{white-space:nowrap}   /* 안내 문장은 한 줄로(좁은 화면에서는 줄바꿈 허용) */
+  @media(max-width:760px){.mt .mtone{white-space:normal}}
+  .mt ul.mtnote{margin:10px 0 0;padding-left:20px;font-size:12px;color:var(--ink-soft);line-height:1.7}
+  .mt ul.mtnote li+li{margin-top:2px}
   .mt .grp{margin-top:20px}.mt .grp:first-of-type{margin-top:6px}
   .mt .grp h3{font-size:13px;font-weight:800;color:var(--ink-soft);margin:0}
   .mt .grp .gsub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
@@ -994,9 +998,9 @@ function mtCopyRich(){
 }
 function mtNotifyBox(N){
   return '<div class="box"><h3>'+mtEsc(N.to)+'께 완료 메일을 보내 주세요</h3>'+
-    '<p class="lead">'+mtEsc(N.to)+'의 <b>내가 할 일</b> 페이지에 다음 단계가 <b>자동으로 열렸습니다.</b> 메일 한 통에 열렸다는 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</p>'+
+    '<p class="lead">'+mtEsc(N.to)+'의 <b>내가 할 일</b> 페이지에 다음 단계가 <b>자동으로 열렸습니다.</b><br><span class="mtone">메일 한 통에 열렸다는 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</span></p>'+
     '<div class="act"><button class="btn primary" onclick="mtDownloadEml()">완료 메일 작성</button><button class="btn ghost" onclick="mtCopyRich()">메일 내용 복사</button></div>'+
-    '<p style="font-size:12px;color:var(--ink-soft);margin-top:8px">"완료 메일 작성"은 내려받은 파일을 한 번 열면 Outlook 작성창이 열립니다(Chrome은 다운로드 표시줄, Edge는 다운로드 창에서 파일 열기). 받는 사람은 작성창에서 선택하세요.</p>'+
+    '<ul class="mtnote"><li>"완료 메일 작성" 버튼을 눌러서 다운된 파일을 여세요. 아래 내용이 자동으로 채워진 Outlook으로 연결됩니다.<br>(Chrome은 다운로드 표시줄, Edge는 다운로드 창에서 파일 열기)</li><li>또는 "메일 내용 복사"를 클릭하여 직접 복사-붙여넣기 하셔도 됩니다.</li></ul>'+
     '<div class="sub2"><b>보내지는 메일 미리보기</b><div class="pv"><div class="pvsub"><b>제목</b> '+mtEsc(N.subj)+'</div><div class="pvbody">'+mtMailHTML(N)+'</div></div></div></div>';
 }
 
