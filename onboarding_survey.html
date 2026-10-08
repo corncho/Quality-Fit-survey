@@ -217,7 +217,7 @@ const DEPT_GROUPS=[
   ]}
 ];
 const DEPT_ALL=DEPT_GROUPS.flatMap(g=>g.options);
-let state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null,locked:{}};
+let state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null,locked:{},redo:false,prevAnswers:{},prevAsked:false};
 const app=document.getElementById('app');
 const esc=s=>(s??'').toString().replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 
@@ -342,7 +342,7 @@ function startSurvey(){
   grabProfile();const p=state.profile,isHM=state.role==='hm';
   const need=[p.dept,p.name,p.hire,p.cl];if(isHM)need.push(p.target);
   if(need.some(x=>!x)){const e=document.getElementById('entryErr');e.textContent='필수 항목을 모두 입력해 주세요.';e.classList.add('show');return;}
-  state.answers={};state.step='survey';window.scrollTo(0,0);render();
+  state.answers=Object.assign({},state.prevAnswers);state.step='survey';window.scrollTo(0,0);render();
 }
 function renderSurvey(){const s=SURVEYS[state.key];app.innerHTML=s.dual?dualSurvey(s):standardSurvey(s);updateProgress();}
 function standardSurvey(s){
@@ -413,6 +413,7 @@ function shell(s,inner){
     <h1 style="font-size:19px">${esc(s.title)}</h1>
     ${s.desc?`<p class="lead" style="margin-bottom:8px">${esc(s.desc)}</p>`:''}
     <div class="muted" style="font-size:12.5px;margin-bottom:14px">대상: <span class="nw">${esc(who)}</span> · <span class="nw">${esc(state.profile.dept)}</span> · <span class="nw">입사일 ${esc(state.profile.hire)}</span></div>
+    ${state.redo?`<div class="mood" style="background:#fff7e6;border-color:#f3d28a;color:#7a4b00"><b>다시 작성 요청</b> 이전에 제출하신 내용이 채워져 있습니다. 수정이 필요한 부분만 고쳐서 다시 제출해 주세요. 다시 제출하면 최신 내용으로 반영되고, 이전 제출 기록은 보관됩니다.</div>`:''}
     ${mood?`<div class="mood">${esc(mood)}</div>`:''}
     ${s.role==='팀장(HM)'?hmPanel():''}
     ${inner}
@@ -612,7 +613,7 @@ function renderDone(){
       ${nextStep}
       ${useMt?'<div id="mtExtra" class="mt"></div>':''}
     </div>`;
-    if(useMt){ MT.me=state.me; MT.k=linkKey(); MT.code=state.linkCode||''; MT.who=(state.role==='hm'?state.profile.target:state.profile.name)||''; mtAfterDone(); }
+    if(useMt){ MT.redo=state.redo; MT.me=state.me; MT.k=linkKey(); MT.code=state.linkCode||''; MT.who=(state.role==='hm'?state.profile.target:state.profile.name)||''; mtAfterDone(); }
     return;
   }
   const code=makeCode(state.lastRec);
@@ -656,7 +657,7 @@ function finalizeEntry(){
     const need=[p.dept,p.hire];
     if(!state.selfIn) need.push(p.name);
     if(state.role==='hm')need.push(p.target);
-    if(!need.some(x=>!x)){ state.answers={}; state.step='survey'; }
+    if(!need.some(x=>!x)){ state.answers=Object.assign({},state.prevAnswers); state.step='survey'; }
   }
 }
 function initParams(){
@@ -742,6 +743,7 @@ function startLinkCheck(code){   /* 요청은 한 번만 보낸다. 팀장 2차 
   if(LINK.started)return; LINK.started=true;
   const release=()=>{ if(LINK.released)return; LINK.released=true; LINK.waiters.splice(0).forEach(f=>f()); };
   window.__linkStatusCb=(resp)=>{
+    if(resp && resp.ok && resp.redo){ state.redo=true; loadPrev(); }   /* HR이 재작성으로 다시 열어 준 단계: 이전에 제출한 내용을 채워 연다 */
     const closed=!!(resp && resp.ok && resp.status==='closed');
     const doneAlready=!!(resp && resp.ok && !closed && resp.done);
     if(resp && resp.ok && !closed && !doneAlready) LINK.okAt=Date.now();   /* 제출 직전 재확인을 생략해도 되는지 판단하는 기준 시각 */
@@ -757,6 +759,30 @@ function startLinkCheck(code){   /* 요청은 한 번만 보낸다. 팀장 2차 
   s.onerror=release;
   document.body.appendChild(s);
   setTimeout(release, 20000); // 서버 응답이 보통 2~3초(느리면 10초 이상)라 넉넉히 기다린 뒤에도 안 오면 막지 않고 통과
+}
+/* ===== 재작성(HR이 _link_status 메모에 '재작성'을 적어 다시 연 단계): 이전에 제출한 내용을 채워서 보여 준다 ===== */
+function applyPrev(d){
+  const put=(k,v)=>{ if(v===undefined||v===null||v==='')return; state.prevAnswers[k]=v; if(state.answers[k]===undefined||state.answers[k]==='')state.answers[k]=v; };
+  Object.keys(d.ans||{}).forEach(k=>put(k,d.ans[k]));
+  (d.sc||[]).forEach((v,i)=>put('sc'+i,v));
+  (d.fb||[]).forEach((v,i)=>put('fb'+i,v));
+  put('meetDate',d.meet); put('signHM',d.signHM);
+  if(state.role==='hm' && d.prof){ if(d.prof.dept)state.profile.dept=d.prof.dept; if(d.prof.name)state.profile.name=d.prof.name; }
+  if(state.step==='survey') render();
+}
+function loadPrev(){
+  if(state.prevAsked||!SUBMIT_URL||!state.linkCode)return; state.prevAsked=true;
+  if(state.step==='survey') render();   /* 안내 문구를 먼저 보여 준다 */
+  let tries=0;
+  const send=()=>{
+    tries++;
+    const cb='__prevCb'+tries; window[cb]=resp=>{ if(resp&&resp.ok&&resp.data) applyPrev(resp.data); };
+    const s=document.createElement('script');
+    s.src=SUBMIT_URL+'?action=getResponse&code='+encodeURIComponent(state.linkCode)+'&k='+encodeURIComponent(linkKey())+'&callback='+cb+'&_='+Date.now();
+    s.onerror=()=>{ if(tries<2) setTimeout(send,1500); };
+    document.body.appendChild(s);
+  };
+  send();
 }
 function checkLinkStatus(code, done){
   startLinkCheck(code);
@@ -834,7 +860,7 @@ function mtCard(t,num,primary){
   const hot=mtUrgent(t),due=mtDueTxt(t),chip=due?'<span class="chip '+(hot?'hot':'due')+'">'+mtEsc(due)+'</span>':'';
   if(t.st==='done')return '<div class="t dn">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip dn">완료</span>제출한 내용은 다시 볼 수 없어요</div></div></div>';
   if(t.st==='wait')return '<div class="t wait">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip wt">대기 중</span>'+chip+'<br>'+mtEsc((MT_WAIT[t.k]||(()=>''))(t))+'</div></div><div class="act"><button class="btn primary sm" disabled>아직 열리지 않았어요</button></div></div>';
-  return '<div class="t">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta"><span class="chip go">지금 할 수 있어요</span>'+chip+'</div></div>'+
+  return '<div class="t">'+no+'<div class="body"><div class="ti">'+title+'</div><div class="meta">'+(t.redo?'<span class="chip due">다시 작성 요청</span>':'<span class="chip go">지금 할 수 있어요</span>')+chip+'</div></div>'+
     '<div class="act">'+(t.url?'<a class="btn link sm '+(hot?'red':primary?'primary':'ghost')+'" href="'+mtEsc(t.url)+'">바로 작성하기</a>':'<button class="btn primary sm" disabled>링크 준비 중</button>')+'</div></div>';
 }
 function mtGroup(label,list,sub,first){
@@ -927,7 +953,7 @@ function mtAfterDone(){
   if(!box||!MT.me)return;
   const hub=mtHubUrl();
   let shown=false;
-  const NX=mtNxFromUrl(),earlyN=NX?mtNotifyOf({k:MT.k,who:MT.who,next:NX}):null;   /* 서버 응답 없이도 완료 메일 박스를 먼저 보여 준다 */
+  const NX=mtNxFromUrl(),earlyN=(NX&&!MT.redo)?mtNotifyOf({k:MT.k,who:MT.who,next:NX}):null;   /* 서버 응답 없이도 완료 메일 박스를 먼저 보여 준다 */
   MT._notify=earlyN;
   const early=()=>earlyN?mtNotifyBox(earlyN):'';
   box.innerHTML=early()+'<div class="box"><p class="lead" style="margin:0">다음 단계를 확인하고 있어요... 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.</p><p class="foot" style="margin:8px 0 0">기다리지 않고 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 바로 확인하셔도 됩니다.</p></div>';
@@ -941,7 +967,7 @@ function mtAfterDone(){
   const show=(P)=>{
     const tasks=P.tasks;
     MT.tasks=tasks;MT._sig=P.sig;shown=true;
-    const N=mtNotifyOf(P.mine)||earlyN;MT._notify=N;
+    const N=MT.redo?null:(mtNotifyOf(P.mine)||earlyN);MT._notify=N;
     const rest=tasks.filter(t=>t.st!=='done'),n=tasks.length,dn=n-rest.length;
     let h=N?mtNotifyBox(N):'';
     if(rest.length){
