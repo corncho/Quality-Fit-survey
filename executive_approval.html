@@ -985,12 +985,14 @@ function mtAlert(list){
 
 /* ----- 다음 사람에게 보내는 완료 메일: 서식 있는 한 통(.eml)을 내려받아 열면 PC의 Outlook 작성창이 열린다 ----- */
 const MT_FALLBACK='위 페이지에서 열리지 않는다면 아래 링크로 접속하세요.';
-function mtOpenLine(N){return N.to+', 온보딩 점검 진단 평가 완료하여 전달 드립니다. 아래 링크 접속하시면 '+N.act+' 진행하실 수 있습니다.';}
+function mtOpenLine(N){return N.to+(N.redo?', 온보딩 점검 진단 평가를 수정하여 다시 전달 드립니다. 아래 링크 접속하시면 ':', 온보딩 점검 진단 평가 완료하여 전달 드립니다. 아래 링크 접속하시면 ')+N.act+' 진행하실 수 있습니다.';}
 function mtNotifyOf(task){
   if(!task||!task.next)return null;
-  const who=task.who||MT.who,n=task.next;
-  if(task.k==='n2')return {to:n.to,act:'피드백 작성을',what:who+'님의 2차 자가점검이 제출되어 피드백 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 자가점검 완료, 내가 해야 할 일에 피드백 단계가 열렸습니다!'};
-  if(task.k==='cats')return {to:n.to,act:'결재를',what:who+'님의 팀장 평가가 완료되어 결재 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 팀장 평가 완료, 내가 해야 할 일에 결재 단계가 열렸습니다!'};
+  const who=task.who||MT.who,n=task.next,re=!!MT.redo;   /* 재작성 제출이면 '열렸습니다' 대신 '수정본 제출' 문구 */
+  if(task.k==='n2'&&re)return {redo:true,head:'자가점검 수정본이 제출되었습니다!',to:n.to,act:'수정된 내용을 확인하고 피드백을',what:who+'님의 2차 자가점검이 수정되어 다시 제출되었습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 자가점검 수정본 제출, 내용을 확인해 주세요!'};
+  if(task.k==='cats'&&re)return {redo:true,head:'팀장 평가 수정본이 제출되었습니다!',to:n.to,act:'수정된 내용을 확인하고 결재를',what:who+'님의 팀장 평가가 수정되어 다시 제출되었습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 팀장 평가 수정본 제출, 내용을 확인해 주세요!'};
+  if(task.k==='n2')return {head:'내가 해야 할 일에 링크가 열렸습니다!',to:n.to,act:'피드백 작성을',what:who+'님의 2차 자가점검이 제출되어 피드백 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 자가점검 완료, 내가 해야 할 일에 피드백 단계가 열렸습니다!'};
+  if(task.k==='cats')return {head:'내가 해야 할 일에 링크가 열렸습니다!',to:n.to,act:'결재를',what:who+'님의 팀장 평가가 완료되어 결재 단계가 열렸습니다.',hub:n.hub,direct:n.direct,subj:'(온보딩 점검 진단) '+who+'님 팀장 평가 완료, 내가 해야 할 일에 결재 단계가 열렸습니다!'};
   return null;
 }
 /* 미리보기와 실제 메일이 같은 서식이 되도록 한 함수로 만든다. Outlook(Word 엔진)에서도 깨지지 않게 표와 인라인 스타일만 쓴다 */
@@ -1003,7 +1005,7 @@ function mtMailHTML(N){
       '<td width="30" height="30" align="center" bgcolor="#1F6FEB" style="'+F+'background:#1F6FEB;color:#ffffff;font-weight:bold;font-size:9.5pt;width:30px;height:30px">HR</td>'+
       '<td style="padding-left:10px;'+F+'"><div style="'+F+'font-size:11pt;font-weight:bold;color:#1a2230;line-height:1.3">경력사원 온보딩 진단</div><div style="'+F+'font-size:8.5pt;color:#4a556a;line-height:1.3">인재개발팀 &middot; Talent Development</div></td>'+
     '</tr></table></td></tr>'+
-    '<tr><td style="'+F+'padding:20px 26px 4px"><div style="'+F+'font-size:17pt;font-weight:bold;color:#1a2230;line-height:1.4">'+E(N.to)+', 내가 해야 할 일에 링크가 열렸습니다!</div></td></tr>'+
+    '<tr><td style="'+F+'padding:20px 26px 4px"><div style="'+F+'font-size:17pt;font-weight:bold;color:#1a2230;line-height:1.4">'+E(N.to)+', '+E(N.head)+'</div></td></tr>'+
     '<tr><td style="'+F+'padding:10px 26px 4px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>'+
       '<td width="6" bgcolor="#1F6FEB" style="'+F+'background:#1F6FEB;width:6px;font-size:1px">&nbsp;</td>'+
       '<td bgcolor="#EAF1FE" style="'+F+'background:#EAF1FE;padding:16px 18px">'+
@@ -1013,7 +1015,7 @@ function mtMailHTML(N){
     '<tr><td style="'+F+'padding:16px 26px 22px;font-size:9.5pt;color:#4a556a">&#8251; '+E(MT_FALLBACK)+' <a href="'+E(N.direct)+'" style="color:#1F6FEB;font-weight:bold;text-decoration:underline">바로가기</a></td></tr>'+
     '</table></div>';
 }
-function mtMailPlain(N){return mtOpenLine(N)+'\n\n'+N.to+', 내가 해야 할 일에 링크가 열렸습니다!\n'+N.what+'\n\n내가 할 일 열기: '+N.hub+'\n\n※ '+MT_FALLBACK+'\n바로가기: '+N.direct;}
+function mtMailPlain(N){return mtOpenLine(N)+'\n\n'+N.to+', '+N.head+'\n'+N.what+'\n\n내가 할 일 열기: '+N.hub+'\n\n※ '+MT_FALLBACK+'\n바로가기: '+N.direct;}
 function mtB64(s){const bytes=new TextEncoder().encode(s);let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin);}
 function mtMakeEml(N){
   const wrap=s=>s.replace(/(.{76})/g,'$1\r\n');
@@ -1041,7 +1043,7 @@ function mtCopyRich(){
 }
 function mtNotifyBox(N){
   return '<div class="box"><h3>'+mtEsc(N.to)+'께 완료 메일을 보내 주세요</h3>'+
-    '<p class="lead">'+mtEsc(N.to)+'의 <b>내가 할 일</b> 페이지에 다음 단계가 <b>자동으로 열렸습니다.</b><br><span class="mtone">메일 한 통에 열렸다는 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</span></p>'+
+    '<p class="lead">'+mtEsc(N.to)+(N.redo?'의 <b>내가 할 일</b> 페이지에는 해당 단계가 <b>이미 열려 있습니다.</b> 수정본이 제출되었다는 안내만 보내 주세요.<br><span class="mtone">메일 한 통에 수정본 제출 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</span></p>':'의 <b>내가 할 일</b> 페이지에 다음 단계가 <b>자동으로 열렸습니다.</b><br><span class="mtone">메일 한 통에 열렸다는 안내와, 그 페이지에서 열리지 않을 때 쓰는 바로가기 링크가 함께 들어갑니다.</span></p>')+
     '<div class="act"><button class="btn primary" onclick="mtDownloadEml()">완료 메일 작성</button><button class="btn ghost" onclick="mtCopyRich()">메일 내용 복사</button></div>'+
     '<ul class="mtnote"><li>"완료 메일 작성" 버튼을 눌러서 다운된 파일을 여세요. 아래 내용이 자동으로 채워진 Outlook으로 연결됩니다.<br>(Chrome은 다운로드 표시줄, Edge는 다운로드 창에서 파일 열기)</li><li>또는 "메일 내용 복사"를 클릭하여 직접 복사-붙여넣기 하셔도 됩니다.</li></ul>'+
     '<div class="sub2"><b>보내지는 메일 미리보기</b><div class="pv"><div class="pvsub"><b>제목</b> '+mtEsc(N.subj)+'</div><div class="pvbody">'+mtMailHTML(N)+'</div></div></div></div>';
@@ -1057,7 +1059,7 @@ function mtAfterDone(){
   if(!box||!MT.me)return;
   const hub=mtHubUrl();
   let shown=false;
-  const NX=mtNxFromUrl(),earlyN=(NX&&!MT.redo)?mtNotifyOf({k:MT.k,who:MT.who,next:NX}):null;   /* 서버 응답 없이도 완료 메일 박스를 먼저 보여 준다 */
+  const NX=mtNxFromUrl(),earlyN=NX?mtNotifyOf({k:MT.k,who:MT.who,next:NX}):null;   /* 서버 응답 없이도 완료 메일 박스를 먼저 보여 준다 */
   MT._notify=earlyN;
   const early=()=>earlyN?mtNotifyBox(earlyN):'';
   box.innerHTML=early()+'<div class="box"><p class="lead" style="margin:0">다음 단계를 확인하고 있어요... 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.</p><p class="foot" style="margin:8px 0 0">기다리지 않고 <a href="'+mtEsc(hub)+'">내가 할 일</a> 페이지에서 바로 확인하셔도 됩니다.</p></div>';
@@ -1071,7 +1073,7 @@ function mtAfterDone(){
   const show=(P)=>{
     const tasks=P.tasks;
     MT.tasks=tasks;MT._sig=P.sig;shown=true;
-    const N=MT.redo?null:(mtNotifyOf(P.mine)||earlyN);MT._notify=N;
+    const N=(mtNotifyOf(P.mine)||earlyN);MT._notify=N;
     const rest=tasks.filter(t=>t.st!=='done'),n=tasks.length,dn=n-rest.length;
     let h=N?mtNotifyBox(N):'';
     if(rest.length){
