@@ -833,7 +833,9 @@ function mtToday(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMont
 function mtDstr(iso){const d=new Date(iso+'T00:00:00');return (d.getMonth()+1)+'/'+d.getDate()+' ('+mtWD[d.getDay()]+')';}
 function mtDleft(due){return Math.round((new Date(due+'T00:00:00')-new Date(mtToday()+'T00:00:00'))/86400000);}
 function mtHasDue(t){return /^\d{4}-\d{2}-\d{2}$/.test(t.due||'');}
-function mtUrgent(t){return t.st!=='done'&&mtHasDue(t)&&mtDleft(t.due)<=3;}
+/* 마감 임박 기준(일): 기본 3일 전부터, 2차 입사자 자가점검(n2)은 발송 직후부터 임박해 보이지 않도록 하루 전(D-1)부터 */
+function mtUrgDays(t){return t.k==='n2'?1:3;}
+function mtUrgent(t){return t.st!=='done'&&mtHasDue(t)&&mtDleft(t.due)<=mtUrgDays(t);}
 function mtDueTxt(t){if(!mtHasDue(t))return '';const d=mtDleft(t.due);return d<0?mtDstr(t.due)+' 마감 지남':d===0?mtDstr(t.due)+' 오늘 마감':mtDstr(t.due)+' 마감 D-'+d;}
 function mtHubUrl(){return location.origin+location.pathname.replace(/[^\/]*$/,'')+'my_tasks.html?me='+encodeURIComponent(MT.me);}
 function mtToast(m){
@@ -881,7 +883,7 @@ function mtGroups(list){
 }
 function mtAlert(list){
   const open=list.filter(t=>t.st!=='done'&&mtHasDue(t));
-  const today=open.filter(t=>mtDleft(t.due)<=0).length,soon=open.filter(t=>mtDleft(t.due)>0&&mtDleft(t.due)<=3).length;
+  const today=open.filter(t=>mtDleft(t.due)<=0).length,soon=open.filter(t=>mtDleft(t.due)>0&&mtDleft(t.due)<=mtUrgDays(t)).length;
   if(!today&&!soon)return '';
   const parts=[];if(today)parts.push('오늘 마감 '+today+'건');if(soon)parts.push('마감 임박 '+soon+'건');
   return '<div class="alert"><b>'+parts.join(', ')+'</b><br>마감일이 지나면 링크가 닫힙니다. 빨간색으로 표시된 단계를 먼저 진행해 주세요.</div>';
