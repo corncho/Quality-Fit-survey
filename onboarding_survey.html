@@ -211,13 +211,13 @@ const CL_OPTIONS=['CL1','CL2','CL3','CL4','CL4(p)','기술직','계약직'];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
-    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경팀','에너지사업부 안전환경기획팀',
+    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 EHS담당 안전환경팀','에너지사업부 안전환경기획팀',
     '에너지사업부 엔지니어링팀','에너지사업부 전원개발추진팀',
     '에너지사업부 신사업개발담당 연료sourcing팀','에너지사업부 신사업개발담당 신사업개발팀',
     '에너지사업부 여수공장 Y TF'
   ]},
   {label:'컨버전스사업부', options:[
-    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF',
+    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF 오션자동화TF',
     '컨버전스사업부 GEP한국개발팀','컨버전스사업부 경영지원 시스템솔루션사업팀','컨버전스사업부 경영지원 그린에너지사업팀','컨버전스사업부 경영지원 구매팀',
     '컨버전스사업부 SI사업 솔루션사업1팀','컨버전스사업부 SI사업 솔루션사업2팀','컨버전스사업부 SI사업 솔루션사업3팀',
     '컨버전스사업부 R&D센터 솔루션개발1팀','컨버전스사업부 R&D센터 솔루션개발2팀',
@@ -225,6 +225,9 @@ const DEPT_GROUPS=[
   ]}
 ];
 const DEPT_ALL=DEPT_GROUPS.flatMap(g=>g.options);
+/* 소속 표기가 바뀐 팀(2026-11-05: 부문 EHS담당, 오션자동화TF). 예전 링크나 이미 만든 링크의 옛 표기도 새 표기로 받아들인다 */
+const DEPT_ALIAS={'에너지사업부 안전환경팀':'에너지사업부 EHS담당 안전환경팀','컨버전스사업부 오션자동화TF':'컨버전스사업부 오션자동화TF 오션자동화TF'};
+const deptAlias=v=>DEPT_ALIAS[v]||v;
 let state={round:null,role:null,key:null,profile:{},answers:{},step:'entry',lastRec:null,locked:{},redo:false,prevAnswers:{},prevAsked:false};
 const app=document.getElementById('app');
 const esc=s=>(s??'').toString().replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
@@ -352,7 +355,7 @@ function startSurvey(){
   if(need.some(x=>!x)){const e=document.getElementById('entryErr');e.textContent='필수 항목을 모두 입력해 주세요.';e.classList.add('show');return;}
   state.answers=Object.assign({},state.prevAnswers);state.step='survey';window.scrollTo(0,0);render();
 }
-function renderSurvey(){const s=SURVEYS[state.key];app.innerHTML=s.dual?dualSurvey(s):standardSurvey(s);updateProgress();if(s.dual){renderDraftPanel();fetchDraftState();}}
+function renderSurvey(){const s=SURVEYS[state.key];if(s.dual&&draftGateOn())return renderDraftGate();app.innerHTML=s.dual?dualSurvey(s):standardSurvey(s);updateProgress();if(s.dual){renderDraftPanel();fetchDraftState();}}
 function standardSurvey(s){
   let n=0,html='';
   s.themes.forEach(th=>{html+=`<div class="theme"><div class="theme-h">${esc(th.cat)}</div>`;
@@ -441,7 +444,7 @@ function setText(id,v){state.answers[id]=v;updateProgress();draftChanged();}
    HR이 시트에서 'PW-' 행을 지우면 초안은 남고 비밀번호만 초기화된다. 제출하면 서버가 초안과 비밀번호 행을 지운다. 내용은 시트에 평문으로 저장되어 HR이 볼 수 있다.
    개인 토큰(me)이 없는 직접 링크는 사용할 수 없다. shortcut: 저장 요청의 서버 오류(비밀번호 초기화 직후 등)는 화면이 알 수 없다(no-cors), 필요하면 저장 확인용 조회를 추가 */
 const DRAFT_PW_MIN=4;
-const DR={st:'init',pw:'',msg:'',err:'',timer:null,dirty:false,asked:false,off:false};
+const DR={st:'init',pw:'',msg:'',err:'',timer:null,dirty:false,asked:false,off:false,skip:false,waiters:[]};
 function draftAnswers(){const a=Object.assign({},state.answers);delete a.signNew;return a;}
 function draftHasAnswers(){const a=draftAnswers();return Object.keys(a).some(k=>a[k]!==undefined&&a[k]!=='');}
 function draftServerOk(){return state.key==='2_hm'&&!!SUBMIT_URL&&!!state.me&&!!submissionCode()&&!!(window.crypto&&crypto.subtle);}
@@ -478,42 +481,61 @@ function renderDraftPanel(){
 }
 function fetchDraftState(){
   if(DR.asked||!draftServerOk())return;DR.asked=true;
-  draftGet('',r=>{DR.st=(r&&r.ok&&r.data&&r.data.state)||'err';renderDraftPanel();});
+  draftGet('',r=>{DR.st=(r&&r.ok&&r.data&&r.data.state)||'err';draftRefresh();DR.waiters.splice(0).forEach(f=>f());});
 }
-function draftRetry(){DR.asked=false;DR.st='init';DR.err='';renderDraftPanel();fetchDraftState();}
+/* 초안이 있는 링크는 입력 화면보다 먼저 비밀번호 화면을 보여 준다(이미 쓴 내용이 있으면 화면을 덮지 않음) */
+function draftGateOn(){return state.step==='survey'&&state.key==='2_hm'&&!DR.off&&!DR.skip&&(DR.st==='locked'||DR.st==='reset')&&!draftHasAnswers();}
+function draftRefresh(){if(draftGateOn())renderDraftGate();else renderDraftPanel();}
+function renderDraftGate(){
+  const reset=DR.st==='reset',who=state.profile.target||'입사자',fn=reset?'draftSetPw':'draftUnlock';
+  app.innerHTML=`<div class="card done" id="draftGate">
+    <div class="ic" style="background:var(--accent-soft);color:var(--accent)">&#128274;</div>
+    <h2>${reset?'임시저장 비밀번호가 초기화되었습니다':'임시저장된 내용이 있습니다'}</h2>
+    <p>${reset?'새 비밀번호('+DRAFT_PW_MIN+'자 이상)를 정하면 저장된 내용을 불러와 이어서 작성할 수 있어요.':'<b>'+esc(who)+'</b>님 피드백을 쓰던 내용이 저장되어 있어요. 비밀번호를 입력하면 이어서 작성할 수 있어요.'}</p>
+    <div class="mini-actions mt" style="justify-content:center;margin-top:16px"><input type="password" id="dp_pw" placeholder="${reset?'새 비밀번호':'비밀번호'}" autocomplete="off" style="max-width:210px;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit" onkeydown="if(event.key==='Enter')${fn}()"><button class="btn primary" onclick="${fn}()">${reset?'정하고 불러오기':'불러오기'}</button></div>
+    ${DR.err?`<p style="color:#b3261e;margin-top:10px">${esc(DR.err)}</p>`:''}
+    <p style="margin-top:18px;font-size:12px;color:var(--ink-soft)">비밀번호를 잊으셨다면 <b>${esc(HRDEST)}</b>으로 초기화를 요청해 주세요. 저장된 내용 없이 새로 작성할 수도 있어요.</p>
+    <div class="mini-actions mt" style="justify-content:center"><button class="btn ghost" onclick="draftSkip()">임시저장 없이 새로 작성</button></div>
+    ${hubButtonHTML()}
+  </div>`;
+  const el=document.getElementById('dp_pw');if(el)el.focus();
+}
+function draftSkip(){DR.skip=true;DR.off=true;DR.err='';renderSurvey();}
+function draftRetry(){DR.asked=false;DR.st='init';DR.err='';draftRefresh();fetchDraftState();}
 function draftPwInput(){return ((document.getElementById('dp_pw')||{}).value||'');}
 async function draftSetPw(){
   const v=draftPwInput();
-  if(v.length<DRAFT_PW_MIN){DR.err='비밀번호는 '+DRAFT_PW_MIN+'자 이상이어야 합니다.';return renderDraftPanel();}
-  DR.err='진행 중입니다. 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.';renderDraftPanel();
-  let h;try{h=await pwHash(v);await draftPost({_kind:'draft_setpw',pw:h});}catch(e){DR.err='요청을 보내지 못했습니다. 연결을 확인해 주세요.';return renderDraftPanel();}
+  if(v.length<DRAFT_PW_MIN){DR.err='비밀번호는 '+DRAFT_PW_MIN+'자 이상이어야 합니다.';return draftRefresh();}
+  DR.err='진행 중입니다. 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.';draftRefresh();
+  let h;try{h=await pwHash(v);await draftPost({_kind:'draft_setpw',pw:h});}catch(e){DR.err='요청을 보내지 못했습니다. 연결을 확인해 주세요.';return draftRefresh();}
   verifyPw(h,0);
 }
 function verifyPw(h,n){   /* 설정 요청은 응답을 읽을 수 없어서, 반영됐는지 조회로 확인(최대 약 16초) */
   draftGet(h,r=>{
     if(r&&r.ok&&r.data&&r.data.state==='open'){draftOpen(h,r.data);return;}
-    if(r&&r.error==='bad_pw'){DR.st='locked';DR.err='이미 다른 비밀번호가 설정되어 있습니다. 기존 비밀번호를 입력해 주세요.';return renderDraftPanel();}
+    if(r&&r.error==='bad_pw'){DR.st='locked';DR.err='이미 다른 비밀번호가 설정되어 있습니다. 기존 비밀번호를 입력해 주세요.';return draftRefresh();}
     if(n<8){setTimeout(()=>verifyPw(h,n+1),2000);return;}
-    DR.err='비밀번호 설정을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';renderDraftPanel();
+    DR.err='비밀번호 설정을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';draftRefresh();
   });
 }
 async function draftUnlock(){
   const v=draftPwInput();if(!v)return;
-  DR.err='확인하는 중입니다.';renderDraftPanel();
-  let h;try{h=await pwHash(v);}catch(e){DR.err='확인하지 못했습니다.';return renderDraftPanel();}
+  DR.err='확인하는 중입니다.';draftRefresh();
+  let h;try{h=await pwHash(v);}catch(e){DR.err='확인하지 못했습니다.';return draftRefresh();}
   draftGet(h,r=>{
     if(r&&r.ok&&r.data&&r.data.state==='open'){draftOpen(h,r.data);return;}
     if(r&&r.error==='bad_pw')DR.err='비밀번호가 맞지 않습니다.';
     else if(r&&r.ok&&r.data&&(r.data.state==='reset'||r.data.state==='none')){DR.st=r.data.state;DR.err='';}   /* 그 사이 HR이 초기화함 */
     else DR.err='확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
-    renderDraftPanel();
+    draftRefresh();
   });
 }
 function draftOpen(h,d){
+  const gate=!!document.getElementById('draftGate');
   DR.pw=h;DR.st='open';DR.err='';DR.msg='입력하면 자동으로 저장됩니다.';
   const had=d&&d.a&&Object.keys(d.a).length;
   if(had){Object.assign(state.answers,d.a);DR.msg='저장된 내용을 불러왔습니다'+(d.t?' ('+new Date(d.t).toLocaleString('ko-KR')+')':'')+'.';}
-  if(had)renderSurvey();else renderDraftPanel();
+  if(had||gate)renderSurvey();else draftRefresh();
   DR.dirty=draftHasAnswers();pushDraft();   /* 비밀번호를 정하기 전에 써 둔 내용도 바로 저장 */
 }
 function draftChanged(){
@@ -748,8 +770,8 @@ function applySelfIn(selfIn){
   if(p.hire){state.profile.hire=p.hire;state.locked.hire=true;}
   const h=selfIn.h||{};
   if(h.name&&!state.profile.name)state.profile.name=h.name;       /* 팀장 본인 성명 자동 입력(수정 가능) */
-  if(h.dept&&!state.profile.dept)state.profile.dept=h.dept;
-  if(p.dept&&!state.profile.dept)state.profile.dept=p.dept;
+  if(h.dept&&!state.profile.dept)state.profile.dept=deptAlias(h.dept);
+  if(p.dept&&!state.profile.dept)state.profile.dept=deptAlias(p.dept);
 }
 /* 링크에 차수·역할·핵심 인적사항이 모두 담겨 있으면, 선택 화면 없이 곧바로 설문으로 진입한다.
    입사자 자가점검 핸드오프로 들어온 팀장은 아직 본인 성명을 안 적었으므로 이름은 요구하지 않는다
@@ -771,6 +793,7 @@ function initParams(){
     const ro=q.get('role'); if(ro==='new'||ro==='hm')state.role=ro;
     syncKey();
     ['dept','name','target','cl','hire'].forEach(k=>{const v=q.get(k); if(v)state.profile[k]=v;});
+    if(state.profile.dept)state.profile.dept=deptAlias(state.profile.dept);
     const code=q.get('code'); if(code)state.linkCode=code;
     const me=q.get('me'); if(me)state.me=me.trim();
     /* 팀장 화면: 링크로 받은 입사자 정보(성명/입사일/직급)는 팀장이 바꿀 수 없게 잠근다. 계약직 표기는 누구도 바꿀 수 없다. */
@@ -779,7 +802,7 @@ function initParams(){
     /* 예전 링크 호환: role=hm인데 name 대신 hm 파라미터로 팀장명을 보낸 경우 */
     if(state.role==='hm' && !state.profile.name){ const hmName=q.get('hm'); if(hmName)state.profile.name=hmName; }
     /* 2차 입사자 링크에 팀장 정보(hm, hmdept)가 있으면 자가점검 전달 때 함께 실어, 팀장이 소속/성명을 다시 쓰지 않게 한다 */
-    if(state.role==='new'){ const hn=q.get('hm'), hd=q.get('hmdept'); if(hn||hd) state.hmPre={name:hn||'',dept:hd||''}; }
+    if(state.role==='new'){ const hn=q.get('hm'), hd=q.get('hmdept'); if(hn||hd) state.hmPre={name:hn||'',dept:deptAlias(hd||'')}; }
     /* 새 방식: 자가점검 데이터를 서버에 저장하고 짧은 코드만 링크에 담는다(scref).
        메신저/메일이 긴 링크를 잘라먹어도 안전하다. 조회는 비동기라 아래 부트스트랩에서 처리. */
     const scRef=q.get('scref'); if(scRef)state.scRefCode=scRef;
@@ -1102,12 +1125,15 @@ setTimeout(()=>mtPrefetch(state.me),20000);   /* 제출 직후 남은 단계를 
 if(state.role==='hm' && state.round==='2' && /^2H-/.test(state.linkCode||'') && SUBMIT_URL && !state.scRefCode){
   state.step='checking'; render();
   startLinkCheck(state.linkCode);   /* 링크 확인은 자가점검 조회와 동시에 보낸다(순서대로 보내면 두 번 기다림) */
+  if(draftServerOk())fetchDraftState();   /* 임시저장 확인도 같이 보낸다: 초안이 있으면 입력 화면보다 먼저 비밀번호 화면을 보여 주려고 */
   loadSelfDirect(state.linkCode, ()=>{
     finalizeEntry();
     if(state.selfStatus==='done') state.alreadyDone=true;
     else if(state.selfStatus==='wait') state.step='waitSelf';
     else if(state.selfStatus==='fail') state.step='selfFail';
-    bootAfterSelfRef();
+    const go=()=>{ if(go.done)return; go.done=true; bootAfterSelfRef(); };
+    if(state.selfStatus==='ready'&&draftServerOk()&&DR.st==='init'){ DR.waiters.push(go); setTimeout(go,6000); }   /* 초안 확인이 끝나길 잠깐 기다림(최대 6초, 늦으면 입력 화면을 먼저 열고 뒤늦게 비밀번호 화면으로 바꿈) */
+    else go();
   });
 }else if(state.scRefCode && SUBMIT_URL){
   state.step='checking'; render();

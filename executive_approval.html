@@ -334,13 +334,13 @@ const CLCOLS=[['CL1','CL1'],['CL23','CL2/3'],['CL4','CL4'],['CL4p','CL4(p)']];
 /* 사내 채용 트래커(LT_Tracker) 기준 소속 목록. 새 팀이 생기면 트래커 확인 후 추가할 것 — 임의 배정 금지. */
 const DEPT_GROUPS=[
   {label:'에너지사업부', options:[
-    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 안전환경팀','에너지사업부 안전환경기획팀',
+    '에너지사업부 운영팀','에너지사업부 군산공장 안전환경팀','에너지사업부 EHS담당 안전환경팀','에너지사업부 안전환경기획팀',
     '에너지사업부 엔지니어링팀','에너지사업부 전원개발추진팀',
     '에너지사업부 신사업개발담당 연료sourcing팀','에너지사업부 신사업개발담당 신사업개발팀',
     '에너지사업부 여수공장 Y TF'
   ]},
   {label:'컨버전스사업부', options:[
-    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF',
+    '컨버전스사업부 FA사업 SY사업팀','컨버전스사업부 FA사업 SF사업팀','컨버전스사업부 오션자동화TF 오션자동화TF',
     '컨버전스사업부 GEP한국개발팀','컨버전스사업부 경영지원 시스템솔루션사업팀','컨버전스사업부 경영지원 그린에너지사업팀','컨버전스사업부 경영지원 구매팀',
     '컨버전스사업부 SI사업 솔루션사업1팀','컨버전스사업부 SI사업 솔루션사업2팀','컨버전스사업부 SI사업 솔루션사업3팀',
     '컨버전스사업부 R&D센터 솔루션개발1팀','컨버전스사업부 R&D센터 솔루션개발2팀',
@@ -348,6 +348,8 @@ const DEPT_GROUPS=[
   ]}
 ];
 const DEPT_ALL=DEPT_GROUPS.flatMap(g=>g.options);
+/* 소속 표기가 바뀐 팀(2026-11-05: 부문 EHS담당, 오션자동화TF). 예전 링크의 옛 표기도 새 표기로 받아들인다 */
+const DEPT_ALIAS={'에너지사업부 안전환경팀':'에너지사업부 EHS담당 안전환경팀','컨버전스사업부 오션자동화TF':'컨버전스사업부 오션자동화TF 오션자동화TF'};
 function buildDeptSelects(){
   const optsHTML='<option value="">선택</option>'+DEPT_GROUPS.map(g=>`<optgroup label="${g.label}">${g.options.map(o=>`<option>${o}</option>`).join('')}</optgroup>`).join('')+'<option value="__other__">기타(직접입력)</option>';
   ['p','hm'].forEach(prefix=>{ const el=document.getElementById(prefix+'_dept_sel'); if(el) el.innerHTML=optsHTML; });
@@ -363,6 +365,7 @@ function getDept(prefix){
   return sel.value==='__other__' ? (document.getElementById(prefix+'_dept_other').value||'').trim() : sel.value;
 }
 function setDept(prefix, val, disable){
+  val=DEPT_ALIAS[val]||val;
   const sel=document.getElementById(prefix+'_dept_sel'), other=document.getElementById(prefix+'_dept_other');
   if(!sel) return;
   if(val){
