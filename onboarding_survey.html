@@ -352,7 +352,7 @@ function startSurvey(){
   if(need.some(x=>!x)){const e=document.getElementById('entryErr');e.textContent='필수 항목을 모두 입력해 주세요.';e.classList.add('show');return;}
   state.answers=Object.assign({},state.prevAnswers);state.step='survey';window.scrollTo(0,0);render();
 }
-function renderSurvey(){const s=SURVEYS[state.key];app.innerHTML=s.dual?dualSurvey(s):standardSurvey(s);updateProgress();}
+function renderSurvey(){const s=SURVEYS[state.key];app.innerHTML=s.dual?dualSurvey(s):standardSurvey(s);updateProgress();if(s.dual){renderDraftPanel();fetchDraftState();}}
 function standardSurvey(s){
   let n=0,html='';
   s.themes.forEach(th=>{html+=`<div class="theme"><div class="theme-h">${esc(th.cat)}</div>`;
@@ -375,7 +375,7 @@ function standardSurvey(s){
 function dualSurvey(s){
   const hasIn = state.selfIn && state.selfIn.s;
   if(state.profile.target) state.answers.signNew=state.profile.target;   /* 입사자 서명은 팀장이 쓰는 칸이 아니므로 입사자 성명으로 자동 입력 후 잠금 */
-  let html='';
+  let html='<div id="draftPanel"></div>';
   s.items.forEach((it,i)=>{const sid='self'+i,fid='fb'+i;
     const selfBox = hasIn
       ? `<div style="font-size:13.5px;white-space:pre-wrap;background:var(--line-soft);border-radius:9px;padding:11px 13px;min-height:60px">${esc(state.selfIn.s[i]||'')||'<span class="muted">(미작성)</span>'}</div>`
@@ -387,6 +387,7 @@ function dualSurvey(s){
       </div></div>`;});
   html+=`<div class="theme"><div class="theme-h">면담 확인</div>
     <p class="hint" style="margin:8px 0 4px">입사자와 팀장 간 면담을 통해 피드백 내용을 공유하였음을 확인하며 서명(성명 입력)합니다.</p>
+    <p class="hint" style="margin:0 0 6px;color:var(--ink-soft)">피드백을 먼저 작성해 두고, 면담을 마친 뒤 면담일과 서명을 입력해 제출할 수 있습니다. 제출 전까지는 입사자에게 전달되지 않습니다. 맨 위 임시저장 안내에서 비밀번호를 정하면 입력 내용이 자동으로 저장되고, PC든 모바일이든 본인 링크(내가 할 일)로 다시 열어 비밀번호를 입력하면 이어서 볼 수 있습니다.</p>
     <div class="row3">
       <label class="fld"><span class="lb">면담일 <span class="req">*</span></span><input type="date" oninput="setText('meetDate',this.value)" value="${esc(state.answers.meetDate||'')}"></label>
       <label class="fld"><span class="lb">입사자 서명 <span style="font-weight:500;color:var(--ink-soft)">(자동 입력)</span></span><input type="text" value="${esc(state.answers.signNew||'')}" placeholder="입사자 성명" disabled></label>
@@ -434,7 +435,102 @@ function shell(s,inner){
   </div>`;
 }
 function setLikert(id,v){state.answers[id]=v;render();}
-function setText(id,v){state.answers[id]=v;updateProgress();}
+function setText(id,v){state.answers[id]=v;updateProgress();draftChanged();}
+/* 2차 팀장 임시저장(v9.5): 피드백을 먼저 써 두고 면담 후 면담일/서명을 넣어 제출하도록 서버(_pending_approval)에 자동 저장한다.
+   링크만 아는 사람이 읽거나 덮어쓰지 못하도록 팀장이 정한 비밀번호가 필요하다(화면이 비밀번호의 PBKDF2 해시를 보내고, 서버가 확인한다. 틀린 횟수 제한은 없음).
+   HR이 시트에서 'PW-' 행을 지우면 초안은 남고 비밀번호만 초기화된다. 제출하면 서버가 초안과 비밀번호 행을 지운다. 내용은 시트에 평문으로 저장되어 HR이 볼 수 있다.
+   개인 토큰(me)이 없는 직접 링크는 사용할 수 없다. shortcut: 저장 요청의 서버 오류(비밀번호 초기화 직후 등)는 화면이 알 수 없다(no-cors), 필요하면 저장 확인용 조회를 추가 */
+const DRAFT_PW_MIN=4;
+const DR={st:'init',pw:'',msg:'',err:'',timer:null,dirty:false,asked:false,off:false};
+function draftAnswers(){const a=Object.assign({},state.answers);delete a.signNew;return a;}
+function draftHasAnswers(){const a=draftAnswers();return Object.keys(a).some(k=>a[k]!==undefined&&a[k]!=='');}
+function draftServerOk(){return state.key==='2_hm'&&!!SUBMIT_URL&&!!state.me&&!!submissionCode()&&!!(window.crypto&&crypto.subtle);}
+function hhmm(){return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}
+function setDraftNote(m){const n=document.getElementById('draftNote');if(n)n.textContent=m;}
+async function pwHash(pw){
+  const enc=new TextEncoder(),km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:enc.encode('qfdraft:'+submissionCode()),iterations:100000},km,256);
+  return [...new Uint8Array(bits)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function draftGet(pwHex,cb){   /* JSONP 조회. 응답이 없으면 cb(null) */
+  const name='__draftCb'+Date.now()+Math.random().toString(36).slice(2,6),s=document.createElement('script');
+  let done=false;const fin=r=>{if(done)return;done=true;try{delete window[name];s.remove();}catch(e){}cb(r);};
+  window[name]=fin;
+  s.src=SUBMIT_URL+'?action=getDraft&code='+encodeURIComponent(submissionCode())+'&me='+encodeURIComponent(state.me)+(pwHex?'&pw='+pwHex:'')+'&callback='+name+'&_='+Date.now();
+  s.onerror=()=>fin(null);document.body.appendChild(s);setTimeout(()=>fin(null),60000);
+}
+function draftPost(obj){return fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({_code:submissionCode(),me:state.me},obj))});}
+function renderDraftPanel(){
+  const el=document.getElementById('draftPanel');if(!el)return;
+  const inp=(ph,fn)=>`<input type="password" id="dp_pw" placeholder="${ph}" autocomplete="off" style="max-width:190px;margin-right:6px" onkeydown="if(event.key==='Enter')${fn}()">`;
+  const row=(ph,fn,label)=>`<div style="margin-top:8px">${inp(ph,fn)}<button class="btn primary" style="padding:7px 14px" onclick="${fn}()">${label}</button></div>`;
+  let h='';
+  if(DR.off) h='';
+  else if(state.key==='2_hm'&&!state.me) h='<b>임시저장</b> 이 기능은 메일의 본인 링크(내가 할 일 페이지)로 들어왔을 때만 사용할 수 있습니다. 지금 화면에서는 저장되지 않으니 작성 후 바로 제출해 주세요.';
+  else if(!draftServerOk()) h='<b>임시저장</b> 이 브라우저에서는 임시저장을 사용할 수 없습니다.';
+  else if(DR.st==='init') h='임시저장 상태를 확인하고 있습니다.';
+  else if(DR.st==='none') h=`<b>임시저장</b> 비밀번호(${DRAFT_PW_MIN}자 이상)를 정하면 입력 내용이 자동으로 저장되고, 이 링크를 PC나 모바일에서 다시 열어도 비밀번호로 이어서 쓸 수 있습니다. 제출 전에는 입사자에게 전달되지 않습니다.${row('비밀번호','draftSetPw','정하고 시작')}`;
+  else if(DR.st==='locked') h=`<b>임시저장된 내용이 있습니다.</b> 비밀번호를 입력하면 이어서 쓸 수 있습니다(같은 칸은 저장된 내용으로 바뀝니다).${row('비밀번호','draftUnlock','불러오기')}`;
+  else if(DR.st==='reset') h=`<b>임시저장 비밀번호가 초기화되었습니다.</b> 새 비밀번호(${DRAFT_PW_MIN}자 이상)를 정하면 저장된 내용을 불러옵니다.${row('새 비밀번호','draftSetPw','정하고 불러오기')}`;
+  else if(DR.st==='open') h=`<b>임시저장 사용 중</b> <span id="draftNote">${esc(DR.msg||'입력하면 자동으로 저장됩니다.')}</span>`;
+  else h=`임시저장 상태를 확인하지 못했습니다. <button class="btn ghost" style="padding:5px 10px" onclick="draftRetry()">다시 확인</button>`;
+  el.innerHTML=h?`<div style="background:var(--line-soft);border-radius:10px;padding:11px 13px;margin:0 0 12px;font-size:13px">${h}${DR.err?`<div style="color:#b3261e;margin-top:6px">${esc(DR.err)}</div>`:''}</div>`:'';
+}
+function fetchDraftState(){
+  if(DR.asked||!draftServerOk())return;DR.asked=true;
+  draftGet('',r=>{DR.st=(r&&r.ok&&r.data&&r.data.state)||'err';renderDraftPanel();});
+}
+function draftRetry(){DR.asked=false;DR.st='init';DR.err='';renderDraftPanel();fetchDraftState();}
+function draftPwInput(){return ((document.getElementById('dp_pw')||{}).value||'');}
+async function draftSetPw(){
+  const v=draftPwInput();
+  if(v.length<DRAFT_PW_MIN){DR.err='비밀번호는 '+DRAFT_PW_MIN+'자 이상이어야 합니다.';return renderDraftPanel();}
+  DR.err='진행 중입니다. 서버가 바쁠 때는 1분 정도 걸릴 수 있어요.';renderDraftPanel();
+  let h;try{h=await pwHash(v);await draftPost({_kind:'draft_setpw',pw:h});}catch(e){DR.err='요청을 보내지 못했습니다. 연결을 확인해 주세요.';return renderDraftPanel();}
+  verifyPw(h,0);
+}
+function verifyPw(h,n){   /* 설정 요청은 응답을 읽을 수 없어서, 반영됐는지 조회로 확인(최대 약 16초) */
+  draftGet(h,r=>{
+    if(r&&r.ok&&r.data&&r.data.state==='open'){draftOpen(h,r.data);return;}
+    if(r&&r.error==='bad_pw'){DR.st='locked';DR.err='이미 다른 비밀번호가 설정되어 있습니다. 기존 비밀번호를 입력해 주세요.';return renderDraftPanel();}
+    if(n<8){setTimeout(()=>verifyPw(h,n+1),2000);return;}
+    DR.err='비밀번호 설정을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';renderDraftPanel();
+  });
+}
+async function draftUnlock(){
+  const v=draftPwInput();if(!v)return;
+  DR.err='확인하는 중입니다.';renderDraftPanel();
+  let h;try{h=await pwHash(v);}catch(e){DR.err='확인하지 못했습니다.';return renderDraftPanel();}
+  draftGet(h,r=>{
+    if(r&&r.ok&&r.data&&r.data.state==='open'){draftOpen(h,r.data);return;}
+    if(r&&r.error==='bad_pw')DR.err='비밀번호가 맞지 않습니다.';
+    else if(r&&r.ok&&r.data&&(r.data.state==='reset'||r.data.state==='none')){DR.st=r.data.state;DR.err='';}   /* 그 사이 HR이 초기화함 */
+    else DR.err='확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+    renderDraftPanel();
+  });
+}
+function draftOpen(h,d){
+  DR.pw=h;DR.st='open';DR.err='';DR.msg='입력하면 자동으로 저장됩니다.';
+  const had=d&&d.a&&Object.keys(d.a).length;
+  if(had){Object.assign(state.answers,d.a);DR.msg='저장된 내용을 불러왔습니다'+(d.t?' ('+new Date(d.t).toLocaleString('ko-KR')+')':'')+'.';}
+  if(had)renderSurvey();else renderDraftPanel();
+  DR.dirty=draftHasAnswers();pushDraft();   /* 비밀번호를 정하기 전에 써 둔 내용도 바로 저장 */
+}
+function draftChanged(){
+  if(state.key!=='2_hm'||DR.st!=='open'||DR.off)return;
+  DR.dirty=true;DR.msg='저장 대기 중';setDraftNote(DR.msg);clearTimeout(DR.timer);DR.timer=setTimeout(pushDraft,2500);
+}
+function pushDraft(){
+  if(DR.st!=='open'||DR.off||!DR.dirty)return;
+  clearTimeout(DR.timer);DR.dirty=false;
+  draftPost({_kind:'draft_save',pw:DR.pw,t:Date.now(),a:draftAnswers()})
+    .then(()=>{DR.msg='임시 저장됨 '+hhmm();setDraftNote(DR.msg);})
+    .catch(()=>{DR.dirty=true;DR.msg='저장하지 못했습니다. 연결을 확인해 주세요.';setDraftNote(DR.msg);});
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')pushDraft();});   /* 탭을 닫거나 다른 앱으로 넘어갈 때 바로 저장 */
+window.addEventListener('pagehide',pushDraft);
+window.addEventListener('beforeunload',e=>{if(state.step==='survey'&&state.key==='2_hm'&&!DR.off&&DR.st!=='open'&&draftHasAnswers()){e.preventDefault();e.returnValue='';}});   /* 저장되지 않은 내용이 있으면 닫기 전에 경고 */
+function clearDraft(){DR.off=true;DR.dirty=false;clearTimeout(DR.timer);}
 function backToEntry(){state.step='entry';window.scrollTo(0,0);render();}
 function requiredKeys(){
   const s=SURVEYS[state.key],keys=[];
@@ -494,7 +590,7 @@ async function submitSurvey(){
   if(SUBMIT_URL){
     try{
       await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'survey',_sheet:sheetNameFor(state.key),_code:submissionCode(),record:rec})});
-      state.sent=true; fireRefresh();
+      state.sent=true; fireRefresh(); clearDraft();
     }catch(e){ state.sent=false; downloadJSON(rec); }
   }else{
     state.sent=false; downloadJSON(rec);
