@@ -282,6 +282,7 @@
     <div class="err-banner" id="errBanner"></div>
   </div>
 
+  <p id="leaveNote" style="margin:0 0 8px;font-size:12px;color:var(--warn)">제출하기 전에 이 페이지를 닫으면 작성한 내용이 사라집니다.</p>
   <div class="actions">
     <button class="btn primary" id="makeLinkBtn" onclick="makeExecLink()">임원 결재 링크 만들기</button>
     <button class="btn primary" id="submitBtn" onclick="submitToSheet()" style="display:none">결재 완료 · 시트로 제출</button>
@@ -526,8 +527,11 @@ function blockIfMissing(){
   const first=document.getElementById(miss[0][2]); if(first) first.scrollIntoView({behavior:'smooth',block:'center'});
   return true;
 }
-document.addEventListener('input',()=>{ clearMissing(); updateProgress(); });
-document.addEventListener('change',()=>{ clearMissing(); updateProgress(); });
+document.addEventListener('input',()=>{ EA_DIRTY=true; clearMissing(); updateProgress(); });
+document.addEventListener('change',()=>{ EA_DIRTY=true; clearMissing(); updateProgress(); });
+/* 입력이 있는데 제출하지 않고 닫으려 하면 브라우저 기본 경고(문구는 바꿀 수 없음, 모바일 브라우저는 안 띄울 수 있음). 제출이 접수되면 풀린다 */
+let EA_DIRTY=false, EA_SENT=false;
+window.addEventListener('beforeunload',e=>{ if(EA_DIRTY&&!EA_SENT){ e.preventDefault(); e.returnValue=''; } });
 function onCLChange(){
   CATS.flatMap(c=>c.items).forEach(it=>{
     const box=document.getElementById('crit_'+it.key);
@@ -650,7 +654,7 @@ async function submitToSheet(){
   try{
     const rec=toFlatRecord(d);
     await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({_kind:'exec_final',_code:_linkCode,record:rec})});
-    fireRefresh();
+    fireRefresh(); EA_SENT=true;
     renderExecDone();
   }catch(e){
     btn.disabled=false; btn.textContent=orig;
@@ -695,7 +699,7 @@ async function sendExecHandoff(payload){
   try{
     await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:JSON.stringify({_kind:'exec_stage1',_code:_linkCode,teamLead:payload,record:toFlatRecord(payload)})});
-    fireRefresh();
+    fireRefresh(); EA_SENT=true;
     return true;
   }catch(e){ return false; }
 }
