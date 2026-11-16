@@ -30,6 +30,7 @@
   .tile{border:1.5px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;transition:.12s;background:#fff;text-align:left}
   .tile:hover{border-color:#b9c6e6}
   .tile.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(31,111,235,.08)}
+  .tile.dim{opacity:.4;cursor:not-allowed}.tile.dim:hover{border-color:var(--line)}
   .tile .t{font-weight:700;font-size:15px}.tile .d{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
   label.fld{display:block;margin-top:16px}
   label.fld .lb{font-size:13px;font-weight:600;margin-bottom:6px;display:block}
@@ -312,13 +313,13 @@ function renderEntry(){
     <p class="lead">해당하는 차수와 역할을 선택하고 인적사항을 입력한 뒤 시작해 주세요. 제출하면 응답이 `+esc(HRDEST)+`으로 자동 접수됩니다.</p>
     <div class="eyebrow">1 · 진단 차수</div>
     <div class="grid2">
-      <button class="tile ${rs==='1'?'on':''}" onclick="pickRound('1')"><div class="t">1차 · 채용 Quality 진단 <span class="pill">D+30</span></div><div class="d">제대로 채용했는가 조기 점검</div></button>
-      <button class="tile ${rs==='2'?'on':''}" onclick="pickRound('2')"><div class="t">2차 · 온보딩 적응 진단 <span class="pill">D+90</span></div><div class="d">잘 정착하고 있는가 종합 점검</div></button>
+      <button class="tile ${rs==='1'?'on':(state.fixed?'dim':'')}" onclick="pickRound('1')"><div class="t">1차 · 채용 Quality 진단 <span class="pill">D+30</span></div><div class="d">제대로 채용했는가 조기 점검</div></button>
+      <button class="tile ${rs==='2'?'on':(state.fixed?'dim':'')}" onclick="pickRound('2')"><div class="t">2차 · 온보딩 적응 진단 <span class="pill">D+90</span></div><div class="d">잘 정착하고 있는가 종합 점검</div></button>
     </div>
     <div class="eyebrow" style="margin-top:22px">2 · 작성자 역할</div>
     <div class="grid2">
-      <button class="tile ${rl==='new'?'on':''}" onclick="pickRole('new')"><div class="t">입사자 본인</div><div class="d">${rs==='2'?'온보딩 적응 진단':'채용 Quality 진단'}</div></button>
-      <button class="tile ${rl==='hm'?'on':''}" onclick="pickRole('hm')"><div class="t">팀장 (Hiring Manager)</div><div class="d">${rs==='2'?'자가점검 확인 및 HM 평가':'채용 Quality 진단'}</div></button>
+      <button class="tile ${rl==='new'?'on':(state.fixed?'dim':'')}" onclick="pickRole('new')"><div class="t">입사자 본인</div><div class="d">${rs==='2'?'온보딩 적응 진단':'채용 Quality 진단'}</div></button>
+      <button class="tile ${rl==='hm'?'on':(state.fixed?'dim':'')}" onclick="pickRole('hm')"><div class="t">팀장 (Hiring Manager)</div><div class="d">${rs==='2'?'자가점검 확인 및 HM 평가':'채용 Quality 진단'}</div></button>
     </div>
     <div id="profileBox">${(rs&&rl)?profileFields():''}</div>
     <div class="err-banner" id="entryErr"></div>
@@ -363,8 +364,8 @@ function profileFields(){
     </div>`;
 }
 function isContract(){return state.profile&&state.profile.cl==='계약직';}
-function pickRound(r){state.round=r;syncKey();render();}
-function pickRole(r){state.role=r;syncKey();render();}
+function pickRound(r){if(state.fixed)return;state.round=r;syncKey();render();}
+function pickRole(r){if(state.fixed)return;state.role=r;syncKey();render();}
 function syncKey(){state.key=(state.round&&state.role)?`${state.round}_${state.role==='hm'?'hm':'new'}`:null;}
 function grabProfile(){
   const g=id=>document.getElementById(id)?.value?.trim()||'';
@@ -458,7 +459,7 @@ function shell(s,inner){
       <div class="prog"><i id="progBar"></i></div>
     </div>
     <p id="leaveNote" class="hint" style="margin:14px 0 0;color:var(--warn)${draftCapable()?';display:none':''}">제출하기 전에 이 페이지를 닫으면 작성한 내용이 사라집니다.</p>
-    <div class="actions" style="margin-top:8px"><button class="btn ghost" onclick="backToEntry()">&larr; 이전</button><button class="btn primary" onclick="submitSurvey()">제출하기</button></div>
+    <div class="actions" style="margin-top:8px">${(state.fixed&&!state.me)?'<span></span>':`<button class="btn ghost" onclick="backToEntry()">&larr; ${state.fixed?'내가 할 일':'이전'}</button>`}<button class="btn primary" onclick="submitSurvey()">제출하기</button></div>
     <div id="draftPanel"></div>
   </div>`;
 }
@@ -597,7 +598,11 @@ window.addEventListener('pagehide',pushDraft);
 /* 작성 중인 내용이 있는데 제출도 임시저장도 안 된 채 닫으려 하면 브라우저 기본 경고(문구는 바꿀 수 없음). 모든 설문 화면에 적용. 모바일 브라우저는 경고를 안 띄울 수 있음 */
 window.addEventListener('beforeunload',e=>{if(state.step==='survey'&&!state.sent&&!(draftCapable()&&DR.st==='open')&&draftHasAnswers()){e.preventDefault();e.returnValue='';}});
 function clearDraft(){DR.off=true;DR.dirty=false;clearTimeout(DR.timer);}
-function backToEntry(){state.step='entry';window.scrollTo(0,0);render();}
+/* 메일 링크로 들어온 사람(state.fixed)은 차수/역할 선택 화면으로 돌아가지 못하게 한다(다른 역할 화면으로 들어가는 것 방지). 개인 토큰이 있으면 내가 할 일로, 없으면 아무 데도 가지 않는다. 입력 중이면 beforeunload 경고가 먼저 뜬다 */
+function backToEntry(){
+  if(state.fixed){ if(state.me) location.href=location.origin+location.pathname.replace(/[^\/]*$/,'')+'my_tasks.html?me='+encodeURIComponent(state.me); return; }
+  state.step='entry';window.scrollTo(0,0);render();
+}
 function requiredKeys(){
   const s=SURVEYS[state.key],keys=[];
   if(s.dual){
@@ -836,6 +841,7 @@ function initParams(){
     const r=q.get('round'); if(r==='1'||r==='2')state.round=r;
     const ro=q.get('role'); if(ro==='new'||ro==='hm')state.role=ro;
     syncKey();
+    if(state.round&&state.role)state.fixed=true;   /* 링크가 차수와 역할을 정해 준 경우: 선택 화면에서 바꾸지 못함 */
     ['dept','name','target','cl','hire'].forEach(k=>{const v=q.get(k); if(v)state.profile[k]=v;});
     if(state.profile.dept)state.profile.dept=deptAlias(state.profile.dept);
     const code=q.get('code'); if(code)state.linkCode=code;
