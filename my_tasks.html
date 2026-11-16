@@ -106,8 +106,8 @@ function card(t,num,primary){
     '<div class="act"><button class="btn sm" disabled>아직 열리지 않았어요</button></div></div>';
   const fresh=!!S.fresh[t.k+'|'+t.code];
   return '<div class="t'+(fresh?' fresh':'')+'">'+no+'<div class="body"><div class="ti">'+title+'</div>'+
-    '<div class="meta">'+(t.dr?'<span class="chip go">이어서 작성하기</span>':fresh?'<span class="chip new">방금 열렸어요</span>':(t.redo?'<span class="chip due">다시 작성 요청</span>':'<span class="chip go">지금 할 수 있어요</span>'))+chip+'</div></div>'+
-    '<div class="act">'+(t.url?'<a class="btn'+(hot?' red':primary?'':' ghost')+' sm" href="'+esc(withNext(t))+'">바로 작성하기</a>':'<button class="btn sm" disabled>링크 준비 중</button>')+'</div></div>';
+    '<div class="meta">'+(t.dr?'<span class="chip go">임시저장됨</span>':fresh?'<span class="chip new">방금 열렸어요</span>':(t.redo?'<span class="chip due">다시 작성 요청</span>':'<span class="chip go">지금 할 수 있어요</span>'))+chip+'</div></div>'+
+    '<div class="act">'+(t.url?'<a class="btn'+(hot?' red':primary?'':' ghost')+' sm" href="'+esc(withNext(t))+'">'+(t.dr?'이어서 작성하기':'바로 작성하기')+'</a>':'<button class="btn sm" disabled>링크 준비 중</button>')+'</div></div>';
 }
 function groupHTML(label,list,sub,first){
   if(!list.length)return '';
